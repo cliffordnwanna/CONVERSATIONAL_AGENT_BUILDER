@@ -1,6 +1,6 @@
-# AI Conversational Agent Builder
+# 🤖 Conversational Agent Builder
 
-Public demo for creating domain-specific AI chatbots using prompt templates, intent-aware responses, and live analytics.
+Build AI Agents That Actually Understand Your Business
 
 ## Features
 
@@ -46,7 +46,7 @@ This transforms the AI agent builder from a basic demo into a **legitimate SaaS 
 
 ## Quick Start
 
-1. **Clone**: `git clone [repository-url]`
+1. **Clone**: `git clone https://github.com/cliffordnwanna/CONVERSATIONAL_AGENT_BUILDER.git`
 2. **Install**: `npm install`
 3. **Configure**: Add `OPENAI_API_KEY` to `.env.local`
 4. **Deploy**: `npm run build && npm start`
