@@ -11,6 +11,7 @@ async function getRelevantKnowledge(query: string, sessionId: string): Promise<s
     const response = await fetch(`http://localhost:3000/api/knowledge?sessionId=${sessionId}`);
     const data = await response.json();
     
+    // Combine all knowledge sources
     const allKnowledge = [
       ...(data.files || []),
       ...(data.sources || [])
@@ -30,7 +31,8 @@ async function getRelevantKnowledge(query: string, sessionId: string): Promise<s
       
       // If item contains at least 2 query words, consider it relevant
       if (matches >= 2) {
-        relevantContent += `${item.title || item.name}:\n${item.content.substring(0, 1000)}\n\n`;
+        const title = item.title || item.name || "Knowledge Source";
+        relevantContent += `${title}:\n${item.content.substring(0, 1000)}\n\n`;
       }
     }
     

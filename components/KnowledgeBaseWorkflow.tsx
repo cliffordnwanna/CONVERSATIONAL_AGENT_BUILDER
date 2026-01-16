@@ -46,47 +46,23 @@ export default function KnowledgeBaseWorkflow({
       const data = await response.json();
       
       if (data.success) {
-        // Add to knowledge base via API
-        const knowledgeResponse = await fetch("/api/knowledge", {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            sessionId: sessionId,
-            source: {
-              id: crypto.randomUUID(),
-              title: data.title || websiteUrl,
-              content: data.content,
-              type: "url",
-              url: websiteUrl,
-              status: "completed",
-              metadata: {
-                description: data.description,
-                lastScraped: new Date().toISOString(),
-                wordCount: data.content.split(/\s+/).length,
-              },
-            },
-          }),
-        });
-
-        const knowledgeData = await knowledgeResponse.json();
+        const newSource: KnowledgeSource = {
+          id: crypto.randomUUID(),
+          type: "url",
+          content: data.content,
+          title: data.title || websiteUrl,
+          status: "completed",
+          url: websiteUrl,
+          metadata: {
+            description: data.description,
+            lastScraped: new Date().toISOString(),
+            wordCount: data.content.split(/\s+/).length,
+          },
+        };
         
-        if (knowledgeData.success) {
-          const newSource: KnowledgeSource = {
-            id: knowledgeData.source.id,
-            type: "url",
-            content: knowledgeData.source.content,
-            title: knowledgeData.source.title,
-            status: "completed",
-            url: websiteUrl,
-            metadata: knowledgeData.source.metadata,
-          };
-          
-          setSources(prev => [...prev, newSource]);
-          onKnowledgeUpdate([...sources, newSource]);
-          setUrl("");
-        } else {
-          throw new Error(knowledgeData.error || "Failed to save scraped content");
-        }
+        setSources(prev => [...prev, newSource]);
+        onKnowledgeUpdate([...sources, newSource]);
+        setUrl("");
       } else {
         throw new Error(data.error || "Failed to scrape website");
       }
@@ -107,83 +83,37 @@ export default function KnowledgeBaseWorkflow({
     }
   };
 
-  const addPlainText = async () => {
+  const addPlainText = () => {
     if (!plainText.trim()) return;
     
-    try {
-      const response = await fetch("/api/knowledge", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          sessionId: sessionId,
-          source: {
-            id: crypto.randomUUID(),
-            title: `Plain Text ${sources.filter(s => s.type === "text").length + 1}`,
-            content: plainText,
-            type: "text",
-            status: "completed",
-            metadata: {
-              wordCount: plainText.split(/\s+/).length,
-            },
-          },
-        }),
-      });
-
-      const data = await response.json();
-      
-      if (data.success) {
-        const newSource: KnowledgeSource = {
-          id: data.source.id,
-          type: "text",
-          content: data.source.content,
-          title: data.source.title,
-          status: "completed",
-          metadata: data.source.metadata,
-        };
-        
-        setSources(prev => [...prev, newSource]);
-        onKnowledgeUpdate([...sources, newSource]);
-        setPlainText("");
-      } else {
-        throw new Error(data.error || "Failed to save text content");
-      }
-    } catch (error) {
-      console.error("Text save error:", error);
-    }
+    const newSource: KnowledgeSource = {
+      id: crypto.randomUUID(),
+      type: "text",
+      content: plainText,
+      title: `Plain Text ${sources.filter(s => s.type === "text").length + 1}`,
+      status: "completed",
+      metadata: {
+        wordCount: plainText.split(/\s+/).length,
+      },
+    };
+    
+    setSources(prev => [...prev, newSource]);
+    onKnowledgeUpdate([...sources, newSource]);
+    setPlainText("");
   };
 
-  const removeSource = async (id: string) => {
-    try {
-      const response = await fetch("/api/knowledge", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          sessionId: sessionId,
-          itemId: id,
-          itemType: "source",
-        }),
-      });
-
-      const data = await response.json();
-      
-      if (data.success) {
-        setSources(prev => prev.filter(s => s.id !== id));
-        onKnowledgeUpdate(sources.filter(s => s.id !== id));
-      } else {
-        throw new Error(data.error || "Failed to remove source");
-      }
-    } catch (error) {
-      console.error("Remove error:", error);
-    }
+  const removeSource = (id: string) => {
+    setSources(prev => prev.filter(s => s.id !== id));
+    onKnowledgeUpdate(sources.filter(s => s.id !== id));
   };
 
-  const retryScraping = async (id: string, url: string) => {
+  const retryScraping = (id: string, url: string) => {
     setSources(prev => prev.map(s => 
       s.id === id ? { ...s, status: "pending" } : s
     ));
     
     // Re-scrape the website
-    await scrapeWebsite(url);
+    scrapeWebsite(url);
   };
 
   return (
