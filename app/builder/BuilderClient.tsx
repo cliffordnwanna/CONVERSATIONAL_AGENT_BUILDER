@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import KnowledgeUpload from "@/components/KnowledgeUpload";
 import AgentConfigurator from "@/components/AgentConfigurator";
 import BackButton from "@/components/BackButton";
+import KnowledgeBaseWorkflow from "@/components/KnowledgeBaseWorkflow";
 
 interface Message {
   role: "user" | "assistant";
@@ -45,6 +46,7 @@ export default function BuilderClient() {
     thumbsDown: 0,
   });
   const [knowledgeFiles, setKnowledgeFiles] = useState<any[]>([]);
+  const [knowledgeSources, setKnowledgeSources] = useState<any[]>([]);
   const [agentConfig, setAgentConfig] = useState<AgentConfig>({
     useCase: template || "",
     tone: "professional",
@@ -120,7 +122,7 @@ export default function BuilderClient() {
 
   const handleCompleteConfiguration = () => {
     // Only mark as configured if both agent config AND knowledge base are complete
-    if (agentConfig.useCase && agentConfig.tone && agentConfig.goal && knowledgeFiles.length > 0) {
+    if (agentConfig.useCase && agentConfig.tone && agentConfig.goal && (knowledgeFiles.length > 0 || knowledgeSources.length > 0)) {
       setIsConfigured(true);
     }
   };
@@ -146,8 +148,8 @@ export default function BuilderClient() {
             </div>
             <div className="flex items-center gap-4">
               <BackButton href="/" />
-              <Badge variant={knowledgeFiles.length > 0 ? "default" : "secondary"}>
-                🧠 {knowledgeFiles.length} Files
+              <Badge variant={(knowledgeFiles.length + knowledgeSources.length) > 0 ? "default" : "secondary"}>
+                🧠 {(knowledgeFiles.length + knowledgeSources.length)} Sources
               </Badge>
               <Badge variant={agentConfig.useCase ? "default" : "secondary"}>
                 ⚡ {agentConfig.useCase ? "Configured" : "Setup Required"}
@@ -163,8 +165,9 @@ export default function BuilderClient() {
           <div className="lg:col-span-1 space-y-6">
             {!isConfigured ? (
               <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsList className="grid w-full grid-cols-1">
+                <TabsList className="grid w-full grid-cols-1 sm:grid-cols-2">
                   <TabsTrigger value="configure">Configure Agent</TabsTrigger>
+                  <TabsTrigger value="knowledge">Knowledge Base</TabsTrigger>
                 </TabsList>
                 
                 <TabsContent value="configure" className="space-y-6">
@@ -172,9 +175,26 @@ export default function BuilderClient() {
                     onConfigUpdate={setAgentConfig}
                     initialTemplate={template}
                     onComplete={handleCompleteConfiguration}
-                    knowledgeFilesCount={knowledgeFiles.length}
+                    knowledgeFilesCount={knowledgeFiles.length + knowledgeSources.length}
                     sessionId={sessionId}
                     onKnowledgeUpdate={setKnowledgeFiles}
+                  />
+                </TabsContent>
+                
+                <TabsContent value="knowledge" className="space-y-6">
+                  <KnowledgeBaseWorkflow 
+                    sessionId={sessionId}
+                    onKnowledgeUpdate={(sources) => {
+                      setKnowledgeSources(sources);
+                      // Convert to expected format for existing system
+                      const combinedFiles = [...knowledgeFiles, ...sources.map(s => ({
+                        name: s.title,
+                        content: s.content,
+                        type: s.type,
+                        url: s.url
+                      }))];
+                      setKnowledgeFiles(combinedFiles);
+                    }}
                   />
                 </TabsContent>
               </Tabs>

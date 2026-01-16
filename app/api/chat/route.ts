@@ -7,10 +7,16 @@ import { faqPrompt } from "@/prompts/faq";
 // Simple knowledge retrieval (in production, use vector similarity)
 async function getRelevantKnowledge(query: string, sessionId: string): Promise<string> {
   try {
+    // Get both uploaded files and scraped sources
     const response = await fetch(`http://localhost:3000/api/knowledge?sessionId=${sessionId}`);
     const data = await response.json();
     
-    if (!data.files || data.files.length === 0) {
+    const allKnowledge = [
+      ...(data.files || []),
+      ...(data.sources || [])
+    ];
+    
+    if (allKnowledge.length === 0) {
       return "";
     }
     
@@ -18,13 +24,13 @@ async function getRelevantKnowledge(query: string, sessionId: string): Promise<s
     const queryWords = query.toLowerCase().split(/\s+/);
     let relevantContent = "";
     
-    for (const file of data.files) {
-      const content = file.content.toLowerCase();
+    for (const item of allKnowledge) {
+      const content = item.content.toLowerCase();
       const matches = queryWords.filter(word => content.includes(word)).length;
       
-      // If file contains at least 2 query words, consider it relevant
+      // If item contains at least 2 query words, consider it relevant
       if (matches >= 2) {
-        relevantContent += file.content.substring(0, 2000) + "\n\n";
+        relevantContent += `${item.title || item.name}:\n${item.content.substring(0, 1000)}\n\n`;
       }
     }
     

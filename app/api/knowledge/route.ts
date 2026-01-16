@@ -11,8 +11,25 @@ interface KnowledgeFile {
   uploadedAt: string;
 }
 
+interface KnowledgeSource {
+  id: string;
+  title: string;
+  content: string;
+  type: 'url' | 'text';
+  url?: string;
+  status: string;
+  metadata?: any;
+  addedAt: string;
+}
+
+interface KnowledgeSession {
+  files: KnowledgeFile[];
+  sources: KnowledgeSource[];
+  lastUpdated: number;
+}
+
 // In-memory knowledge store (in production, use vector DB like Pinecone)
-const knowledgeStore = new Map<string, KnowledgeFile[]>();
+const knowledgeStore = new Map<string, KnowledgeSession>();
 
 export async function POST(req: NextRequest) {
   try {
@@ -78,15 +95,20 @@ export async function POST(req: NextRequest) {
     }
     
     // Store in session knowledge base
-    if (!knowledgeStore.has(sessionId)) {
-      knowledgeStore.set(sessionId, []);
-    }
-    
-    const existingFiles = knowledgeStore.get(sessionId)!;
+    const existingSession = knowledgeStore.get(sessionId);
+    const currentFiles = existingSession ? existingSession.files : [];
+    const currentSources = existingSession ? existingSession.sources : [];
     
     // Limit to 5 files per session to control costs
-    const updatedFiles = [...existingFiles, ...processedFiles].slice(0, 5);
-    knowledgeStore.set(sessionId, updatedFiles);
+    const updatedFiles = [...currentFiles, ...processedFiles].slice(0, 5);
+    
+    const updatedSession: KnowledgeSession = {
+      files: updatedFiles,
+      sources: currentSources,
+      lastUpdated: Date.now(),
+    };
+    
+    knowledgeStore.set(sessionId, updatedSession);
     
     return NextResponse.json({
       success: true,
@@ -104,12 +126,142 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url);
-  const sessionId = searchParams.get("sessionId");
-  
-  if (!sessionId || !knowledgeStore.has(sessionId)) {
-    return NextResponse.json({ files: [] });
+  const { searchParams } = new URL(req.url || '');
+  const sessionId = searchParams.get('sessionId');
+
+  if (!sessionId) {
+    return NextResponse.json(
+      { error: 'Session ID required' },
+      { status: 400 }
+    );
   }
-  
-  return NextResponse.json({ files: knowledgeStore.get(sessionId) });
+
+  const session = knowledgeStore.get(sessionId) || {
+    files: [],
+    sources: [],
+    lastUpdated: Date.now(),
+  };
+
+  return NextResponse.json({
+    files: session.files,
+    sources: session.sources,
+    totalItems: session.files.length + session.sources.length,
+    lastUpdated: session.lastUpdated,
+  });
+}
+
+export async function PUT(req: NextRequest) {
+  try {
+    const { sessionId, source } = await req.json();
+
+    if (!sessionId || !source) {
+      return NextResponse.json(
+        { error: 'Session ID and source data required' },
+        { status: 400 }
+      );
+    }
+
+    const existingSession = knowledgeStore.get(sessionId) || {
+      files: [],
+      sources: [],
+      lastUpdated: Date.now(),
+    };
+
+    const newSource: KnowledgeSource = {
+      id: source.id,
+      title: source.title,
+      content: source.content,
+      type: source.type,
+      url: source.url,
+      status: source.status,
+      metadata: source.metadata,
+      addedAt: new Date().toISOString(),
+    };
+
+    const updatedSession: KnowledgeSession = {
+      ...existingSession,
+      sources: [...existingSession.sources, newSource],
+      lastUpdated: Date.now(),
+    };
+
+    knowledgeStore.set(sessionId, updatedSession);
+
+    return NextResponse.json({
+      success: true,
+      source: newSource,
+      totalSources: updatedSession.sources.length,
+      totalItems: updatedSession.files.length + updatedSession.sources.length,
+    });
+
+  } catch (error) {
+    console.error('Knowledge source error:', error);
+    return NextResponse.json(
+      { 
+        success: false, 
+        error: 'Failed to add knowledge source' 
+      },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(req: NextRequest) {
+  try {
+    const { sessionId, itemId, itemType } = await req.json();
+
+    if (!sessionId || !itemId) {
+      return NextResponse.json(
+        { error: 'Session ID and item ID required' },
+        { status: 400 }
+      );
+    }
+
+    const session = knowledgeStore.get(sessionId);
+    if (!session) {
+      return NextResponse.json(
+        { error: 'Session not found' },
+        { status: 404 }
+      );
+    }
+
+    let updatedSession: KnowledgeSession;
+
+    if (itemType === 'file') {
+      updatedSession = {
+        ...session,
+        files: session.files.filter((file: KnowledgeFile) => file.id !== itemId),
+        lastUpdated: Date.now(),
+      };
+    } else if (itemType === 'source') {
+      updatedSession = {
+        ...session,
+        sources: session.sources.filter((source: KnowledgeSource) => source.id !== itemId),
+        lastUpdated: Date.now(),
+      };
+    } else {
+      return NextResponse.json(
+        { error: 'Invalid item type' },
+        { status: 400 }
+      );
+    }
+
+    knowledgeStore.set(sessionId, updatedSession);
+
+    return NextResponse.json({
+      success: true,
+      files: updatedSession.files,
+      sources: updatedSession.sources,
+      totalItems: updatedSession.files.length + updatedSession.sources.length,
+    });
+
+  } catch (error) {
+    console.error('Knowledge delete error:', error);
+    return NextResponse.json(
+      { 
+        success: false, 
+        error: 'Failed to delete knowledge item' 
+      },
+      { status: 500 }
+    );
+  }
 }
