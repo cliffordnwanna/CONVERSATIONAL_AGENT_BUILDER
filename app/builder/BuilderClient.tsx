@@ -184,16 +184,33 @@ export default function BuilderClient() {
                 <TabsContent value="knowledge" className="space-y-6">
                   <KnowledgeBaseWorkflow 
                     sessionId={sessionId}
-                    onKnowledgeUpdate={(sources) => {
+                    onKnowledgeUpdate={async (sources) => {
                       setKnowledgeSources(sources);
-                      // Convert to expected format for existing system
-                      const combinedFiles = [...knowledgeFiles, ...sources.map(s => ({
-                        name: s.title,
-                        content: s.content,
-                        type: s.type,
-                        url: s.url
-                      }))];
-                      setKnowledgeFiles(combinedFiles);
+                      
+                      // Save sources to knowledge API
+                      try {
+                        for (const source of sources) {
+                          await fetch("/api/knowledge", {
+                            method: "PUT",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                              sessionId: sessionId,
+                              source: source,
+                            }),
+                          });
+                        }
+                        
+                        // Convert to expected format for existing system
+                        const combinedFiles = [...knowledgeFiles, ...sources.map(s => ({
+                          name: s.title,
+                          content: s.content,
+                          type: s.type,
+                          url: s.url
+                        }))];
+                        setKnowledgeFiles(combinedFiles);
+                      } catch (error) {
+                        console.error("Failed to save knowledge sources:", error);
+                      }
                     }}
                   />
                 </TabsContent>

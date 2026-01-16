@@ -142,11 +142,10 @@ export async function GET(req: NextRequest) {
     lastUpdated: Date.now(),
   };
 
+  // Return both files and sources in the format expected by chat API
   return NextResponse.json({
     files: session.files,
     sources: session.sources,
-    totalItems: session.files.length + session.sources.length,
-    lastUpdated: session.lastUpdated,
   });
 }
 
