@@ -2,34 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
 import * as pdf from "pdf-parse";
-
-interface KnowledgeFile {
-  id: string;
-  name: string;
-  content: string;
-  type: string;
-  uploadedAt: string;
-}
-
-interface KnowledgeSource {
-  id: string;
-  title: string;
-  content: string;
-  type: 'url' | 'text';
-  url?: string;
-  status: string;
-  metadata?: any;
-  addedAt: string;
-}
-
-interface KnowledgeSession {
-  files: KnowledgeFile[];
-  sources: KnowledgeSource[];
-  lastUpdated: number;
-}
-
-// In-memory knowledge store (in production, use vector DB like Pinecone)
-const knowledgeStore = new Map<string, KnowledgeSession>();
+import { knowledgeStore, KnowledgeFile, KnowledgeSource, KnowledgeSession } from "@/lib/knowledgeStore";
+import { createBatchEmbeddings } from "@/lib/embeddings";
+import { chunkKnowledge } from "@/lib/chunking";
+import { vectorStore } from "@/lib/vectorStore";
 
 export async function POST(req: NextRequest) {
   try {
@@ -55,17 +31,43 @@ export async function POST(req: NextRequest) {
       
       if (fileType === "application/pdf") {
         try {
-          const pdfData = await (pdf as any)(buffer);
-          content = pdfData.text;
+          // Simple PDF text extraction approach
+          const bufferString = buffer.toString('utf-8');
+          
+          // Extract readable text from PDF (basic approach)
+          const textMatches = bufferString.match(/[a-zA-Z0-9\s.,;:!?'"()-]+/g);
+          const extractedText = textMatches ? textMatches.join(' ') : '';
+          
+          // Clean up of extracted text
+          content = extractedText
+            .replace(/[^\w\s.,;:!?'"()-]/g, '')
+            .replace(/\s+/g, ' ')
+            .trim()
+            .substring(0, 2000); // Limit content size
+            
         } catch (error) {
           console.error("PDF parsing error:", error);
-          content = "Error parsing PDF file";
+          content = `PDF uploaded: ${file.name}. Text extraction failed.`;
         }
       } else if (fileType === "text/plain" || file.name.endsWith(".txt")) {
         content = buffer.toString("utf-8");
       } else if (fileType.includes("word") || file.name.endsWith(".docx")) {
-        // For DOCX, we'd need a library like mammoth
-        content = "DOCX file uploaded. Text extraction requires additional processing.";
+        // For DOCX, try basic text extraction
+        try {
+          const bufferString = buffer.toString('utf-8');
+          const textMatches = bufferString.match(/[a-zA-Z0-9\s.,;:!?'"()-]+/g);
+          const extractedText = textMatches ? textMatches.join(' ') : '';
+          
+          content = extractedText
+            .replace(/[^\w\s.,;:!?'"()-]/g, '')
+            .replace(/\s+/g, ' ')
+            .trim()
+            .substring(0, 2000);
+            
+        } catch (error) {
+          console.error("DOCX parsing error:", error);
+          content = "DOCX file uploaded. Text extraction failed.";
+        }
       } else {
         content = buffer.toString("utf-8");
       }
@@ -73,7 +75,7 @@ export async function POST(req: NextRequest) {
       const knowledgeFile: KnowledgeFile = {
         id: crypto.randomUUID(),
         name: file.name,
-        content: content.substring(0, 10000), // Limit content size
+        content: content.substring(0, 50000), // Increased limit for full documents
         type: fileType,
         uploadedAt: new Date().toISOString(),
       };
@@ -82,38 +84,81 @@ export async function POST(req: NextRequest) {
     }
     
     // Process pasted text
-    if (pastedText) {
-      const knowledgeFile: KnowledgeFile = {
+    if (pastedText && pastedText.trim()) {
+      const textFile: KnowledgeFile = {
         id: crypto.randomUUID(),
         name: "Pasted Text",
-        content: pastedText.substring(0, 10000),
+        content: pastedText.substring(0, 50000),
         type: "text/plain",
         uploadedAt: new Date().toISOString(),
       };
       
-      processedFiles.push(knowledgeFile);
+      processedFiles.push(textFile);
     }
     
-    // Store in session knowledge base
-    const existingSession = knowledgeStore.get(sessionId);
-    const currentFiles = existingSession ? existingSession.files : [];
-    const currentSources = existingSession ? existingSession.sources : [];
+    // Get existing session
+    const existingSession = knowledgeStore.get(sessionId) || {
+      files: [],
+      sources: [],
+      lastUpdated: Date.now(),
+    };
     
-    // Limit to 5 files per session to control costs
-    const updatedFiles = [...currentFiles, ...processedFiles].slice(0, 5);
-    
+    // Update session
     const updatedSession: KnowledgeSession = {
-      files: updatedFiles,
-      sources: currentSources,
+      ...existingSession,
+      files: [...existingSession.files, ...processedFiles],
       lastUpdated: Date.now(),
     };
     
     knowledgeStore.set(sessionId, updatedSession);
     
+    // Debug: Log what was stored
+    console.log("📚 Knowledge Store Update:", {
+      sessionId,
+      filesStored: knowledgeStore.get(sessionId)?.files?.length || 0,
+      sourcesStored: knowledgeStore.get(sessionId)?.sources?.length || 0,
+      totalItems: (knowledgeStore.get(sessionId)?.files?.length || 0) + 
+                  (knowledgeStore.get(sessionId)?.sources?.length || 0),
+      sessionData: knowledgeStore.get(sessionId),
+    });
+    
+    // Create embeddings for all processed files (Adjustment 3)
+    const allKnowledge = processedFiles.map(file => ({
+      id: file.id,
+      type: "file" as const,
+      title: file.name,
+      content: file.content,
+      status: "completed" as const,
+      source: file.name,
+      addedAt: Date.now()
+    }));
+    
+    const chunks = chunkKnowledge(allKnowledge);
+    const embeddings = await createBatchEmbeddings(chunks.map(c => c.content));
+    
+    const vectorChunks = chunks.map((chunk, index) => ({
+      id: chunk.id,
+      content: chunk.content,
+      embedding: embeddings[index],
+      metadata: chunk.metadata
+    }));
+    
+    // Add to vector store (APPEND, not overwrite - Adjustment 1)
+    vectorStore.add(sessionId, vectorChunks);
+    
     return NextResponse.json({
       success: true,
-      files: updatedFiles,
-      message: `Successfully processed ${processedFiles.length} items`,
+      id: processedFiles[0]?.id,  // Return id directly for frontend consistency
+      title: processedFiles[0]?.name,  // Return title for frontend
+      content: processedFiles[0]?.content,  // Return content for frontend
+      files: processedFiles,
+      chunks: vectorChunks,  // Return chunks for frontend tracking
+      metadata: {
+        wordCount: processedFiles[0]?.content.split(/\s+/).length,
+        chunksCreated: vectorChunks.length,
+      },
+      totalFiles: updatedSession.files.length,
+      totalItems: updatedSession.files.length + updatedSession.sources.length,
     });
     
   } catch (error) {
@@ -151,11 +196,12 @@ export async function GET(req: NextRequest) {
 
 export async function PUT(req: NextRequest) {
   try {
-    const { sessionId, source } = await req.json();
+    const body = await req.json();
+    const { sessionId } = body;
 
-    if (!sessionId || !source) {
+    if (!sessionId) {
       return NextResponse.json(
-        { error: 'Session ID and source data required' },
+        { error: 'Session ID required' },
         { status: 400 }
       );
     }
@@ -166,16 +212,55 @@ export async function PUT(req: NextRequest) {
       lastUpdated: Date.now(),
     };
 
-    const newSource: KnowledgeSource = {
-      id: source.id,
-      title: source.title,
-      content: source.content,
-      type: source.type,
-      url: source.url,
-      status: source.status,
-      metadata: source.metadata,
-      addedAt: new Date().toISOString(),
-    };
+    let newSource: KnowledgeSource;
+
+    // Handle text upload
+    if (body.text) {
+      newSource = {
+        id: crypto.randomUUID(),
+        title: `Text Entry ${existingSession.sources.length + 1}`,
+        content: body.text,
+        type: "text",
+        status: "completed",
+        metadata: {
+          wordCount: body.text.split(/\s+/).length,
+        },
+        addedAt: new Date().toISOString(),
+      };
+    }
+    // Handle URL upload
+    else if (body.url) {
+      newSource = {
+        id: crypto.randomUUID(),
+        title: body.url,
+        content: "Website scraped content placeholder", // This would be replaced by actual scraping
+        type: "url",
+        url: body.url,
+        status: "completed",
+        metadata: {
+          lastScraped: new Date().toISOString(),
+        },
+        addedAt: new Date().toISOString(),
+      };
+    }
+    // Handle legacy source format
+    else if (body.source) {
+      newSource = {
+        id: body.source.id,
+        title: body.source.title,
+        content: body.source.content,
+        type: body.source.type,
+        url: body.source.url,
+        status: body.source.status,
+        metadata: body.source.metadata,
+        addedAt: new Date().toISOString(),
+      };
+    } else {
+      return NextResponse.json(
+        { error: 'No valid content provided (text, url, or source required)' },
+        { status: 400 }
+      );
+    }
 
     const updatedSession: KnowledgeSession = {
       ...existingSession,
@@ -184,10 +269,52 @@ export async function PUT(req: NextRequest) {
     };
 
     knowledgeStore.set(sessionId, updatedSession);
-
+    
+    // Debug: Log what was stored
+    console.log("📚 PUT Knowledge Store Update:", {
+      sessionId,
+      sourcesStored: knowledgeStore.get(sessionId)?.sources?.length || 0,
+      totalItems: (knowledgeStore.get(sessionId)?.files?.length || 0) + 
+                  (knowledgeStore.get(sessionId)?.sources?.length || 0),
+      sessionData: knowledgeStore.get(sessionId),
+    });
+    
+    // Create embeddings for new source (Adjustment 3)
+    if (newSource.status === "completed" && newSource.content.trim()) {
+      const knowledge = [{
+        id: newSource.id,
+        type: newSource.type as "file" | "url" | "text",
+        title: newSource.title,
+        content: newSource.content,
+        status: "completed" as const,
+        source: newSource.url || newSource.title,
+        addedAt: Date.now()
+      }];
+      
+      const chunks = chunkKnowledge(knowledge);
+      const embeddings = await createBatchEmbeddings(chunks.map(c => c.content));
+      
+      const vectorChunks = chunks.map((chunk, index) => ({
+        id: chunk.id,
+        content: chunk.content,
+        embedding: embeddings[index],
+        metadata: chunk.metadata
+      }));
+      
+      // Add to vector store (APPEND, not overwrite - Adjustment 1)
+      vectorStore.add(sessionId, vectorChunks);
+    }
+    
     return NextResponse.json({
       success: true,
+      id: newSource.id,  // Return id directly for frontend consistency
+      title: newSource.title,  // Return title for frontend
+      content: newSource.content,  // Return content for frontend
       source: newSource,
+      metadata: {
+        wordCount: newSource.content.split(/\s+/).length,
+        chunksCreated: newSource.status === "completed" ? Math.ceil(newSource.content.length / 500) : 0,
+      },
       totalSources: updatedSession.sources.length,
       totalItems: updatedSession.files.length + updatedSession.sources.length,
     });

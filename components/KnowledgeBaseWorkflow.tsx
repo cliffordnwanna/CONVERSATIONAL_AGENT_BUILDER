@@ -160,16 +160,14 @@ export default function KnowledgeBaseWorkflow({
             </TabsList>
             
             <TabsContent value="url" className="space-y-4">
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium mb-2">Website URL</label>
-                  <Input
-                    placeholder="https://example.com or https://docs.example.com"
-                    value={url}
-                    onChange={(e) => setUrl(e.target.value)}
-                    className="w-full"
-                  />
-                </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Website URL</label>
+                <Input
+                  placeholder="https://example.com or https://docs.example.com"
+                  value={url}
+                  onChange={(e) => setUrl(e.target.value)}
+                  className="w-full"
+                />
                 <Button 
                   onClick={() => scrapeWebsite(url)}
                   disabled={!url.trim() || isProcessing}
@@ -178,7 +176,7 @@ export default function KnowledgeBaseWorkflow({
                   {isProcessing ? "🔄 Scraping..." : "🕷️ Scrape Website"}
                 </Button>
                 <p className="text-xs text-gray-500">
-                  Extracts main content from the website. Supports documentation sites, blogs, and company pages.
+                  Extracts main content from website. Supports documentation sites, blogs, and company pages.
                 </p>
               </div>
             </TabsContent>

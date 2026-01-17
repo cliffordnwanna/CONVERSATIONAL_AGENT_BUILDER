@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import KnowledgeUpload from "@/components/KnowledgeUpload";
+import KnowledgeBaseWorkflow from "@/components/KnowledgeBaseWorkflow";
 
 interface AgentConfig {
   useCase: string;
@@ -21,9 +21,10 @@ interface AgentConfiguratorProps {
   knowledgeFilesCount?: number;
   sessionId?: string;
   onKnowledgeUpdate?: (files: any[]) => void;
+  renderKnowledgeBaseStep?: () => React.ReactNode;
 }
 
-export default function AgentConfigurator({ onConfigUpdate, initialTemplate, onComplete, knowledgeFilesCount, sessionId, onKnowledgeUpdate }: AgentConfiguratorProps) {
+export default function AgentConfigurator({ onConfigUpdate, initialTemplate, onComplete, knowledgeFilesCount, sessionId, onKnowledgeUpdate, renderKnowledgeBaseStep }: AgentConfiguratorProps) {
   const [step, setStep] = useState(1);
   const [config, setConfig] = useState<AgentConfig>({
     useCase: "",
@@ -244,20 +245,10 @@ export default function AgentConfigurator({ onConfigUpdate, initialTemplate, onC
           </div>
         )}
 
-        {/* Step 4: Knowledge Upload */}
+        {/* Step 4: Knowledge Base */}
         {step === 4 && (
           <div className="space-y-6">
-            <div>
-              <h3 className="text-lg font-semibold mb-4">
-                Upload your knowledge base
-              </h3>
-              {sessionId && onKnowledgeUpdate && (
-                <KnowledgeUpload
-                  sessionId={sessionId}
-                  onKnowledgeUpdate={onKnowledgeUpdate}
-                />
-              )}
-            </div>
+            {renderKnowledgeBaseStep && renderKnowledgeBaseStep()}
           </div>
         )}
 
@@ -269,7 +260,7 @@ export default function AgentConfigurator({ onConfigUpdate, initialTemplate, onC
               {!config.useCase && <p>• Select a use case</p>}
               {!config.tone && <p>• Choose a communication tone</p>}
               {!config.goal && <p>• Define your main goal</p>}
-              {(!knowledgeFilesCount || knowledgeFilesCount === 0) && <p>• Upload at least one file to knowledge base</p>}
+              {(!knowledgeFilesCount || knowledgeFilesCount === 0) && <p>• Add at least one knowledge source (file, text, or website)</p>}
             </div>
           </div>
         )}
