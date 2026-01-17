@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
-import * as pdf from "pdf-parse";
 import { knowledgeStore, KnowledgeFile, KnowledgeSource, KnowledgeSession } from "@/lib/knowledgeStore";
 import { createBatchEmbeddings } from "@/lib/embeddings";
 import { chunkKnowledge } from "@/lib/chunking";
