@@ -1,3 +1,5 @@
+"use client";
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,18 +8,21 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-interface KnowledgeSource {
+// Use the same unified interface as BuilderClient
+interface UnifiedKnowledge {
   id: string;
-  type: "url" | "text" | "file";
-  content: string;
+  type: "file" | "url" | "text";
   title: string;
-  status: "pending" | "processing" | "completed" | "error";
-  url?: string;
+  content: string;
+  status: "pending" | "completed" | "error";
+  url?: string; // Keep url for backward compatibility
+  source?: string; // URL or filename  
   metadata?: {
+    wordCount?: number;
     description?: string;
     lastScraped?: string;
-    wordCount?: number;
   };
+  addedAt: number;
 }
 
 export default function KnowledgeBaseWorkflow({ 
@@ -25,9 +30,9 @@ export default function KnowledgeBaseWorkflow({
   onKnowledgeUpdate 
 }: { 
   sessionId: string;
-  onKnowledgeUpdate: (sources: KnowledgeSource[]) => void;
+  onKnowledgeUpdate: (sources: UnifiedKnowledge[]) => void;
 }) {
-  const [sources, setSources] = useState<KnowledgeSource[]>([]);
+  const [sources, setSources] = useState<UnifiedKnowledge[]>([]);
   const [activeTab, setActiveTab] = useState("url");
   const [url, setUrl] = useState("");
   const [plainText, setPlainText] = useState("");
@@ -46,13 +51,15 @@ export default function KnowledgeBaseWorkflow({
       const data = await response.json();
       
       if (data.success) {
-        const newSource: KnowledgeSource = {
+        const newSource: UnifiedKnowledge = {
           id: crypto.randomUUID(),
           type: "url",
           content: data.content,
           title: data.title || websiteUrl,
           status: "completed",
           url: websiteUrl,
+          source: websiteUrl,
+          addedAt: Date.now(),
           metadata: {
             description: data.description,
             lastScraped: new Date().toISOString(),
@@ -60,8 +67,11 @@ export default function KnowledgeBaseWorkflow({
           },
         };
         
-        setSources(prev => [...prev, newSource]);
-        onKnowledgeUpdate([...sources, newSource]);
+        setSources(prev => {
+          const updated = [...prev, newSource];
+          onKnowledgeUpdate(updated);
+          return updated;
+        });
         setUrl("");
       } else {
         throw new Error(data.error || "Failed to scrape website");
@@ -69,15 +79,21 @@ export default function KnowledgeBaseWorkflow({
     } catch (error) {
       console.error("Scraping error:", error);
       // Add error state source
-      const errorSource: KnowledgeSource = {
+      const errorSource: UnifiedKnowledge = {
         id: crypto.randomUUID(),
         type: "url",
         content: "",
         title: websiteUrl,
         status: "error",
         url: websiteUrl,
+        source: websiteUrl,
+        addedAt: Date.now(),
       };
-      setSources(prev => [...prev, errorSource]);
+      setSources(prev => {
+        const updated = [...prev, errorSource];
+        onKnowledgeUpdate(updated);
+        return updated;
+      });
     } finally {
       setIsProcessing(false);
     }
@@ -86,25 +102,32 @@ export default function KnowledgeBaseWorkflow({
   const addPlainText = () => {
     if (!plainText.trim()) return;
     
-    const newSource: KnowledgeSource = {
+    const newSource: UnifiedKnowledge = {
       id: crypto.randomUUID(),
       type: "text",
       content: plainText,
       title: `Plain Text ${sources.filter(s => s.type === "text").length + 1}`,
       status: "completed",
+      addedAt: Date.now(),
       metadata: {
         wordCount: plainText.split(/\s+/).length,
       },
     };
     
-    setSources(prev => [...prev, newSource]);
-    onKnowledgeUpdate([...sources, newSource]);
+    setSources(prev => {
+      const updated = [...prev, newSource];
+      onKnowledgeUpdate(updated);
+      return updated;
+    });
     setPlainText("");
   };
 
   const removeSource = (id: string) => {
-    setSources(prev => prev.filter(s => s.id !== id));
-    onKnowledgeUpdate(sources.filter(s => s.id !== id));
+    setSources(prev => {
+      const updated = prev.filter(s => s.id !== id);
+      onKnowledgeUpdate(updated);
+      return updated;
+    });
   };
 
   const retryScraping = (id: string, url: string) => {
@@ -207,7 +230,14 @@ export default function KnowledgeBaseWorkflow({
                           </div>
                           
                           {source.url && (
-                            <p className="text-xs text-blue-600 mb-2 truncate">{source.url}</p>
+                            <a
+                              href={source.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-xs text-blue-600 underline mb-2 truncate block hover:text-blue-800"
+                            >
+                              {source.url}
+                            </a>
                           )}
                           
                           {source.status === "error" && (

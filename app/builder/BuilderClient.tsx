@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,22 @@ import KnowledgeUpload from "@/components/KnowledgeUpload";
 import AgentConfigurator from "@/components/AgentConfigurator";
 import BackButton from "@/components/BackButton";
 import KnowledgeBaseWorkflow from "@/components/KnowledgeBaseWorkflow";
+
+// Unified knowledge interface - SINGLE SOURCE OF TRUTH
+interface UnifiedKnowledge {
+  id: string;
+  type: "file" | "url" | "text";
+  title: string;
+  content: string;
+  status: "pending" | "completed" | "error";
+  source?: string; // URL or filename
+  metadata?: {
+    wordCount?: number;
+    description?: string;
+    lastScraped?: string;
+  };
+  addedAt: number;
+}
 
 interface Message {
   role: "user" | "assistant";
@@ -45,8 +61,10 @@ export default function BuilderClient() {
     thumbsUp: 0,
     thumbsDown: 0,
   });
-  const [knowledgeFiles, setKnowledgeFiles] = useState<any[]>([]);
-  const [knowledgeSources, setKnowledgeSources] = useState<any[]>([]);
+  
+  // UNIFIED KNOWLEDGE STATE - SINGLE SOURCE OF TRUTH
+  const [knowledge, setKnowledge] = useState<UnifiedKnowledge[]>([]);
+  
   const [agentConfig, setAgentConfig] = useState<AgentConfig>({
     useCase: template || "",
     tone: "professional",
@@ -121,8 +139,8 @@ export default function BuilderClient() {
   };
 
   const handleCompleteConfiguration = () => {
-    // Only mark as configured if both agent config AND knowledge base are complete
-    if (agentConfig.useCase && agentConfig.tone && agentConfig.goal && (knowledgeFiles.length > 0 || knowledgeSources.length > 0)) {
+    // Mark as configured if agent config is complete AND there's at least one knowledge source
+    if (agentConfig.useCase && agentConfig.tone && agentConfig.goal && knowledge.length > 0) {
       setIsConfigured(true);
     }
   };
@@ -130,6 +148,16 @@ export default function BuilderClient() {
   const handleResetConfiguration = () => {
     setIsConfigured(false);
   };
+
+  // Memoized configuration completion check
+  const isConfigurationComplete = useMemo(() => {
+    return Boolean(
+      agentConfig.useCase &&
+      agentConfig.tone &&
+      agentConfig.goal &&
+      knowledge.length > 0
+    );
+  }, [agentConfig, knowledge]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100">
@@ -148,8 +176,8 @@ export default function BuilderClient() {
             </div>
             <div className="flex items-center gap-4">
               <BackButton href="/" />
-              <Badge variant={(knowledgeFiles.length + knowledgeSources.length) > 0 ? "default" : "secondary"}>
-                🧠 {(knowledgeFiles.length + knowledgeSources.length)} Sources
+              <Badge variant={knowledge.length > 0 ? "default" : "secondary"}>
+                🧠 {knowledge.length} Sources
               </Badge>
               <Badge variant={agentConfig.useCase ? "default" : "secondary"}>
                 ⚡ {agentConfig.useCase ? "Configured" : "Setup Required"}
@@ -163,60 +191,48 @@ export default function BuilderClient() {
         <div className="grid lg:grid-cols-3 gap-6">
           {/* Left Panel - Configuration */}
           <div className="lg:col-span-1 space-y-6">
-            {!isConfigured ? (
-              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsList className="grid w-full grid-cols-1 sm:grid-cols-2">
-                  <TabsTrigger value="configure">Configure Agent</TabsTrigger>
-                  <TabsTrigger value="knowledge">Knowledge Base</TabsTrigger>
-                </TabsList>
-                
-                <TabsContent value="configure" className="space-y-6">
-                  <AgentConfigurator 
-                    onConfigUpdate={setAgentConfig}
-                    initialTemplate={template}
-                    onComplete={handleCompleteConfiguration}
-                    knowledgeFilesCount={knowledgeFiles.length + knowledgeSources.length}
-                    sessionId={sessionId}
-                    onKnowledgeUpdate={setKnowledgeFiles}
-                  />
-                </TabsContent>
-                
-                <TabsContent value="knowledge" className="space-y-6">
-                  <KnowledgeBaseWorkflow 
-                    sessionId={sessionId}
-                    onKnowledgeUpdate={async (sources) => {
-                      setKnowledgeSources(sources);
-                      
-                      // Save sources to knowledge API
-                      try {
-                        for (const source of sources) {
-                          await fetch("/api/knowledge", {
-                            method: "PUT",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({
-                              sessionId: sessionId,
-                              source: source,
-                            }),
-                          });
-                        }
-                        
-                        // Convert to expected format for existing system
-                        const combinedFiles = [...knowledgeFiles, ...sources.map(s => ({
-                          name: s.title,
-                          content: s.content,
-                          type: s.type,
-                          url: s.url
-                        }))];
-                        setKnowledgeFiles(combinedFiles);
-                      } catch (error) {
-                        console.error("Failed to save knowledge sources:", error);
-                      }
-                    }}
-                  />
-                </TabsContent>
-              </Tabs>
-            ) : (
-              <Card>
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <TabsList className="grid w-full grid-cols-1 sm:grid-cols-2">
+                <TabsTrigger value="configure">Configure Agent</TabsTrigger>
+                <TabsTrigger value="knowledge">Knowledge Base</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="configure" className="space-y-6">
+                <AgentConfigurator 
+                  onConfigUpdate={setAgentConfig}
+                  initialTemplate={template}
+                  onComplete={handleCompleteConfiguration}
+                  knowledgeFilesCount={knowledge.length}
+                  sessionId={sessionId}
+                  onKnowledgeUpdate={setKnowledge}
+                />
+              </TabsContent>
+              
+              <TabsContent value="knowledge" className="space-y-6">
+                <KnowledgeBaseWorkflow 
+                  sessionId={sessionId}
+                  onKnowledgeUpdate={(newSources) => {
+                    // Convert to unified format and update knowledge
+                    const unifiedSources = newSources.map(source => ({
+                      id: source.id,
+                      type: source.type,
+                      title: source.title,
+                      content: source.content,
+                      status: source.status as "pending" | "completed" | "error",
+                      source: source.url || source.title,
+                      metadata: source.metadata,
+                      addedAt: Date.now()
+                    }));
+                    
+                    setKnowledge(prev => [...prev, ...unifiedSources]);
+                  }}
+                />
+              </TabsContent>
+            </Tabs>
+
+            {/* Configuration Complete Status */}
+            {isConfigurationComplete && (
+              <Card className="mt-6">
                 <CardHeader>
                   <CardTitle className="text-lg">Configuration Complete</CardTitle>
                 </CardHeader>
@@ -277,7 +293,7 @@ export default function BuilderClient() {
                     )}
                   </CardTitle>
                   <div className="flex items-center gap-2">
-                    {knowledgeFiles.length > 0 && (
+                    {knowledge.length > 0 && (
                       <Badge variant="secondary" className="text-xs">
                         🧠 Knowledge Base Active
                       </Badge>
