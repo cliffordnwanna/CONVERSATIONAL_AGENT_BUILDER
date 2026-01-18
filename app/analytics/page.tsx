@@ -109,7 +109,7 @@ export default function AnalyticsPage() {
 
       <div className="container mx-auto px-4 py-6">
         {/* Key Metrics */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           <Card className="relative overflow-hidden">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
@@ -177,7 +177,7 @@ export default function AnalyticsPage() {
         </div>
 
         {/* Charts and Detailed Analytics */}
-        <div className="grid lg:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
           {/* Conversation Chart */}
           <Card className="lg:col-span-2">
             <CardHeader>
