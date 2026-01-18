@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -26,47 +26,36 @@ interface SessionData {
 }
 
 export default function AnalyticsPage() {
-  const [analytics, setAnalytics] = useState<AnalyticsData>({
-    conversations: 0,
-    thumbsUp: 0,
-    thumbsDown: 0,
+  const [analytics] = useState<AnalyticsData>({
+    conversations: 127,
+    thumbsUp: 98,
+    thumbsDown: 2,
     avgResponseTime: 1.2,
-    knowledgeUsage: 0,
-    costSavings: 0,
+    knowledgeUsage: 73,
+    costSavings: 2847.50,
   });
 
-  const [sessions, setSessions] = useState<SessionData[]>([]);
+  const [sessions] = useState<SessionData[]>(() => [
+    {
+      id: crypto.randomUUID(),
+      timestamp: new Date(Date.now() - 86400000).toISOString(), // 24 hours ago
+      messages: 3,
+      satisfaction: 1,
+      usedKnowledge: true,
+    },
+    {
+      id: crypto.randomUUID(),
+      timestamp: new Date(Date.now() - 172800000).toISOString(), // 48 hours ago
+      messages: 2,
+      satisfaction: 1,
+      usedKnowledge: false,
+    },
+    // Add more static sessions...
+  ]);
   const [timeRange, setTimeRange] = useState("24h");
-
-  useEffect(() => {
-    // Set static analytics data to prevent hydration mismatch
-    setAnalytics({
-      conversations: 127,
-      thumbsUp: 98,
-      thumbsDown: 2,
-      avgResponseTime: 1.2,
-      knowledgeUsage: 73,
-      costSavings: 2847.50,
-    });
-
-    setSessions([
-      {
-        id: crypto.randomUUID(),
-        timestamp: new Date(Date.now() - 86400000).toISOString(), // 24 hours ago
-        messages: 3,
-        satisfaction: 1,
-        usedKnowledge: true,
-      },
-      {
-        id: crypto.randomUUID(),
-        timestamp: new Date(Date.now() - 172800000).toISOString(), // 48 hours ago
-        messages: 2,
-        satisfaction: 1,
-        usedKnowledge: false,
-      },
-      // Add more static sessions...
-    ]);
-  }, []);
+  const [barHeights] = useState<number[]>(() =>
+    Array.from({ length: 24 }, () => Math.floor(Math.random() * 60 + 20))
+  );
 
   const satisfactionRate = analytics.conversations > 0 
     ? Math.round((analytics.thumbsUp / (analytics.thumbsUp + analytics.thumbsDown)) * 100)
@@ -200,11 +189,11 @@ export default function AnalyticsPage() {
             <CardContent>
               <div className="h-64 flex items-end justify-between px-4">
                 {/* Simple bar chart visualization */}
-                {Array.from({ length: 24 }, (_, i) => (
+                {barHeights.map((height, i) => (
                   <div
                     key={i}
                     className="w-8 bg-gradient-to-t from-blue-500 to-blue-400 rounded-t"
-                    style={{ height: `${Math.random() * 60 + 20}%` }}
+                    style={{ height: `${height}%` }}
                   />
                 ))}
               </div>

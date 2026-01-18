@@ -20,6 +20,7 @@ interface AgentConfiguratorProps {
   onComplete?: () => void;
   knowledgeFilesCount?: number;
   sessionId?: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onKnowledgeUpdate?: (files: any[]) => void;
   renderKnowledgeBaseStep?: () => React.ReactNode;
 }
@@ -149,7 +150,7 @@ export default function AgentConfigurator({ onConfigUpdate, initialTemplate, onC
           <div className="space-y-6">
             <div>
               <h3 className="text-lg font-semibold mb-4">
-                What's your primary use case?
+                What&apos;s your primary use case?
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {useCases.map((useCase) => (
@@ -206,7 +207,7 @@ export default function AgentConfigurator({ onConfigUpdate, initialTemplate, onC
           <div className="space-y-6">
             <div>
               <h3 className="text-lg font-semibold mb-4">
-                What's your main goal?
+                What&apos;s your main goal?
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {goals.map((goal) => (
