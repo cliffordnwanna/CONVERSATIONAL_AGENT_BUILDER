@@ -7,50 +7,73 @@ import { knowledgeStore } from "@/lib/knowledgeStore";
 import { createEmbedding } from "@/lib/embeddings";
 import { vectorStore } from "@/lib/vectorStore";
 
+interface KnowledgeItem {
+  id: string;
+  content: string;
+  source: string;
+  type: "file" | "url";
+  metadata?: {
+    filename?: string;
+    uploadedAt?: string;
+    url?: string;
+    title?: string;
+    wordCount?: number;
+    lastScraped?: string;
+  };
+}
+
 // Semantic knowledge retrieval using RAG
-async function getRelevantKnowledge(query: string, sessionId: string): Promise<string> {
+async function getRelevantKnowledge(query: string, sessionId: string, knowledgeIds?: string[]): Promise<string> {
   try {
     console.log("🔍 RAG Search - Query:", query);
     console.log("🔍 RAG Search - Session:", sessionId);
-    
     // Get knowledge from shared store directly
     const session = knowledgeStore.get(sessionId);
     
-    console.log("🔍 RAG Search - Session data:", session ? "Found" : "Not found");
+    // Get knowledge items for this session
+    const knowledgeItems: KnowledgeItem[] = [];
     
-    // Diagnostic: Session lookup
-    const sessionData = knowledgeStore.get(sessionId);
-    console.log("🔍 RAG Search - Session lookup:", {
-      sessionId,
-      sessionExists: !!sessionData,
-      filesCount: sessionData?.files?.length || 0,
-      sourcesCount: sessionData?.sources?.length || 0,
-      sessionDataKeys: sessionData ? Object.keys(sessionData) : [],
-    });
-    
-    if (!session) {
-      console.log("❌ RAG Search - No session found");
-      return "";
-    }
-    
-    // Debug: Log what's actually in the session
-    console.log("🔍 RAG Search - Session files:", session.files?.length || 0);
-    console.log("🔍 RAG Search - Session sources:", session.sources?.length || 0);
-    console.log("🔍 RAG Search - Session data:", JSON.stringify(session, null, 2));
-    
-    // Diagnostic: Show all sessions in store
-    console.log("🔍 DIAGNOSTIC - All Sessions in Store:");
-    for (const [sid, data] of knowledgeStore.entries()) {
-      console.log(`  Session ${sid}:`, {
-        files: data.files?.length || 0,
-        sources: data.sources?.length || 0,
-      });
+    if (session) {
+      // Add file content
+      if (session.files && session.files.length > 0) {
+        session.files.forEach(file => {
+          if (!knowledgeIds || knowledgeIds.includes(file.id)) {
+            knowledgeItems.push({
+              id: file.id,
+              content: file.content,
+              source: file.name,
+              type: "file",
+              metadata: { filename: file.name, uploadedAt: file.uploadedAt }
+            });
+          }
+        });
+      }
+      
+      // Add source content
+      if (session.sources && session.sources.length > 0) {
+        session.sources.forEach(source => {
+          if (source.status === "completed" && source.content && (!knowledgeIds || knowledgeIds.includes(source.id))) {
+            knowledgeItems.push({
+              id: source.id,
+              content: source.content,
+              source: source.title || source.url || "Unknown",
+              type: "url",
+              metadata: { 
+                url: source.url, 
+                title: source.title,
+                wordCount: source.metadata?.wordCount,
+                lastScraped: source.metadata?.lastScraped
+              }
+            });
+          }
+        });
+      }
     }
     
     // Combine all knowledge sources
     const allKnowledge = [
-      ...(session.files || []),
-      ...(session.sources || [])
+      ...(session?.files || []),
+      ...(session?.sources || [])
     ];
     
     console.log("🔍 RAG Search - Total knowledge items:", allKnowledge.length);
@@ -104,8 +127,8 @@ export async function POST(req: Request) {
     // Track activity for analytics
     const now = Date.now();
     
-    // Get relevant knowledge
-    const relevantKnowledge = await getRelevantKnowledge(message, sessionId);
+    // Get relevant knowledge using specific knowledge IDs
+    const relevantKnowledge = await getRelevantKnowledge(message, sessionId, knowledgeIds);
     
     console.log("🔍 Chat Response Debug:", {
       relevantKnowledgeLength: relevantKnowledge.length,

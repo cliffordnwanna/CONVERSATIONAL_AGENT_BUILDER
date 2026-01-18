@@ -33,6 +33,7 @@ interface Message {
   content: string;
   timestamp: string;
   usedKnowledge?: boolean;
+  sources?: string[];
 }
 
 interface Analytics {
@@ -82,7 +83,13 @@ export default function BuilderClient({ template = "" }: { template?: string }) 
   }, []);
 
   const sendMessage = async () => {
-    if (!input.trim() || messages.length >= 3) return;
+    if (!input.trim() || messages.filter(m => m.role === 'user').length >= 6) return;
+
+    // Normalize input for better embedding similarity
+    const normalizedInput = input
+      .replace(/["""]/g, '"')
+      .replace(/[']/g, "'")
+      .trim();
 
     setIsLoading(true);
     
@@ -97,7 +104,7 @@ export default function BuilderClient({ template = "" }: { template?: string }) 
       
       console.log("📤 Sending Chat Request:", {
         sessionId,
-        message: input,
+        message: normalizedInput,
         knowledgeCount: knowledge.length,
         knowledgeIds,
         knowledgeDetails: knowledge.map(k => ({
@@ -113,7 +120,7 @@ export default function BuilderClient({ template = "" }: { template?: string }) 
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           sessionId,
-          message: input,
+          message: normalizedInput,
           type: agentConfig.useCase || "support",
           knowledgeIds, // Pass knowledge IDs for RAG lookup
           hasKnowledge: knowledge.length > 0, // Flag to enable RAG
@@ -142,6 +149,7 @@ export default function BuilderClient({ template = "" }: { template?: string }) 
         content: data.reply,
         timestamp: new Date().toISOString(),
         usedKnowledge: data.analytics?.usedKnowledge || false,
+        sources: data.sources || [],
       };
       
       setMessages(prev => [...prev, userMessage, assistantMessage]);
@@ -531,16 +539,12 @@ export default function BuilderClient({ template = "" }: { template?: string }) 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100">
       {/* Header */}
-      <div className="border-b bg-white shadow-sm">
+      <div className="border-b border-white/10 backdrop-blur-sm bg-white/5">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-sm">AI</span>
-              </div>
               <div>
-                <h1 className="text-xl font-bold text-gray-900">Conversational Agent Builder</h1>
-                <p className="text-sm text-gray-500">Session: {sessionId.substring(0, 8)}...</p>
+                <p className="text-sm text-gray-300">Session: {sessionId.substring(0, 8)}...</p>
               </div>
             </div>
             <div className="flex items-center gap-4">
@@ -603,7 +607,7 @@ export default function BuilderClient({ template = "" }: { template?: string }) 
                 <div className="space-y-3">
                   <div className="flex justify-between">
                     <span className="text-sm text-gray-600">Messages</span>
-                    <span className="font-semibold">{messages.length}/3</span>
+                    <span className="font-semibold">{messages.filter(m => m.role === 'user').length}/6</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-sm text-gray-600">👍 Satisfaction</span>
@@ -640,12 +644,12 @@ export default function BuilderClient({ template = "" }: { template?: string }) 
                       </Badge>
                     )}
                     <Badge variant="outline" className="text-xs">
-                      3 Message Limit
+                      6 Message Limit
                     </Badge>
                   </div>
                 </div>
               </CardHeader>
-              <CardContent className="flex-1 flex flex-col p-0">
+              <CardContent className="flex-1 flex flex-col p-0 overflow-y-auto">
                 {/* Messages Area */}
                 <div className="flex-1 overflow-y-auto p-4 space-y-4">
                   {messages.length === 0 ? (
@@ -672,29 +676,26 @@ export default function BuilderClient({ template = "" }: { template?: string }) 
                           {message.usedKnowledge && (
                             <div className="flex items-center gap-2 mb-2 text-xs">
                               <Badge variant="secondary" className="text-xs">
-                                🧠 Used Knowledge Base
+                                Used Knowledge Base
                               </Badge>
                             </div>
                           )}
+
                           <p className="text-sm leading-relaxed">{message.content}</p>
+
+                          {message.role === "assistant" && message.sources && message.sources.length > 0 && (
+                            <div className="mt-2 text-xs text-gray-500">
+                              <span className="font-medium">Source:</span>{" "}
+                              {message.sources.join(", ")}
+                            </div>
+                          )}
+
                           <p className="text-xs opacity-60 mt-2">
                             {formatTime(message.timestamp)}
                           </p>
                         </div>
                       </div>
                     ))
-                  )}
-                  
-                  {isLoading && (
-                    <div className="flex justify-start">
-                      <div className="bg-gray-100 text-gray-900 border border-gray-200 rounded-2xl px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse"></div>
-                          <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse delay-75"></div>
-                          <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse delay-150"></div>
-                        </div>
-                      </div>
-                    </div>
                   )}
                 </div>
 
@@ -706,7 +707,7 @@ export default function BuilderClient({ template = "" }: { template?: string }) 
                       onChange={(e) => setInput(e.target.value)}
                       placeholder="Type your message to test the agent..."
                       className="flex-1 min-h-[60px] resize-none"
-                      disabled={isLoading || messages.length >= 3}
+                      disabled={isLoading || messages.filter(m => m.role === 'user').length >= 6}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter' && !e.shiftKey) {
                           e.preventDefault();
@@ -716,7 +717,7 @@ export default function BuilderClient({ template = "" }: { template?: string }) 
                     />
                     <Button 
                       onClick={sendMessage} 
-                      disabled={!input.trim() || isLoading || messages.length >= 3}
+                      disabled={!input.trim() || isLoading || messages.filter(m => m.role === 'user').length >= 6}
                       className="self-end"
                     >
                       {isLoading ? "..." : "Send"}
@@ -725,13 +726,13 @@ export default function BuilderClient({ template = "" }: { template?: string }) 
                   
                   <div className="flex justify-between items-center mt-2">
                     <span className="text-xs text-gray-500">
-                      {messages.length >= 3 
-                        ? "Session limit reached (3 messages)"
-                        : `${messages.length}/3 messages used`
+                      {messages.filter(m => m.role === 'user').length >= 6 
+                        ? "Session limit reached (6 messages)"
+                        : `${messages.filter(m => m.role === 'user').length}/6 messages used`
                       }
                     </span>
                     
-                    {messages.length > 0 && (
+                    {messages.filter(m => m.role === 'user').length > 0 && (
                       <div className="flex gap-2">
                         <Button 
                           size="sm" 

@@ -229,18 +229,80 @@ export async function PUT(req: NextRequest) {
     }
     // Handle URL upload
     else if (body.url) {
-      newSource = {
-        id: crypto.randomUUID(),
-        title: body.url,
-        content: "Website scraped content placeholder", // This would be replaced by actual scraping
-        type: "url",
-        url: body.url,
-        status: "completed",
-        metadata: {
-          lastScraped: new Date().toISOString(),
-        },
-        addedAt: new Date().toISOString(),
-      };
+      console.log("🕷️ Starting web scrape for:", body.url);
+      
+      try {
+        const response = await fetch(body.url, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const html = await response.text();
+        console.log("🕷️ Raw HTML length:", html.length);
+        
+        // Extract visible text using simple regex-based approach
+        // Remove scripts, styles, and HTML tags
+        let content = html
+          .replace(/<script[^>]*>.*?<\/script>/gi, '')
+          .replace(/<style[^>]*>.*?<\/style>/gi, '')
+          .replace(/<[^>]+>/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim();
+        
+        // Clean up and limit content
+        content = content
+          .substring(0, 10000) // Limit to first 10k chars
+          .replace(/[^\w\s.,;:!?'"()-]/g, '')
+          .replace(/\s+/g, ' ')
+          .trim();
+        
+        console.log("🕷️ Extracted content length:", content.length);
+        
+        if (content.length < 50) {
+          throw new Error("Extracted content too short - likely scraping failed");
+        }
+        
+        newSource = {
+          id: crypto.randomUUID(),
+          title: body.url,
+          content: content,
+          type: "url",
+          url: body.url,
+          status: "completed",
+          metadata: {
+            wordCount: content.split(/\s+/).length,
+            lastScraped: new Date().toISOString(),
+          },
+          addedAt: new Date().toISOString(),
+        };
+        
+        console.log("✅ Web scrape successful:", {
+          url: body.url,
+          contentLength: content.length,
+          wordCount: content.split(/\s+/).length
+        });
+        
+      } catch (error) {
+        console.error("❌ Web scrape failed:", error);
+        newSource = {
+          id: crypto.randomUUID(),
+          title: body.url,
+          content: `Failed to scrape website: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          type: "url",
+          url: body.url,
+          status: "error",
+          metadata: {
+            error: error instanceof Error ? error.message : 'Unknown error',
+            lastScraped: new Date().toISOString(),
+          },
+          addedAt: new Date().toISOString(),
+        };
+      }
     }
     // Handle legacy source format
     else if (body.source) {
@@ -275,22 +337,29 @@ export async function PUT(req: NextRequest) {
       sourcesStored: knowledgeStore.get(sessionId)?.sources?.length || 0,
       totalItems: (knowledgeStore.get(sessionId)?.files?.length || 0) + 
                   (knowledgeStore.get(sessionId)?.sources?.length || 0),
-      sessionData: knowledgeStore.get(sessionId),
     });
     
     // Create embeddings for new source (Adjustment 3)
     if (newSource.status === "completed" && newSource.content.trim()) {
+      // Normalize scraped content for better chunking
+      const normalizedContent = newSource.content
+        .replace(/([.?!])\s+/g, '$1\n\n')   // force paragraph breaks
+        .replace(/(What is|Do you|How does|Why is|Who should|Are you|Can you)/g, '\n\n$1')
+        .trim();
+      
       const knowledge = [{
         id: newSource.id,
         type: newSource.type as "file" | "url" | "text",
         title: newSource.title,
-        content: newSource.content,
+        content: normalizedContent,
         status: "completed" as const,
         source: newSource.url || newSource.title,
         addedAt: Date.now()
       }];
       
       const chunks = chunkKnowledge(knowledge);
+      console.log("🧩 Chunks created:", chunks.length);
+      
       const embeddings = await createBatchEmbeddings(chunks.map(c => c.content));
       
       const vectorChunks = chunks.map((chunk, index) => ({

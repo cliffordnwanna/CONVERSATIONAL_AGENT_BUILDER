@@ -11,10 +11,12 @@ interface BackButtonProps {
 }
 
 export default function BackButton({ href, onClick, label = "Back" }: BackButtonProps) {
+  const buttonClass = "flex items-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white border-0";
+  
   if (href) {
     return (
       <Link href={href}>
-        <Button variant="outline" size="sm" className="flex items-center gap-2">
+        <Button variant="outline" size="sm" className={buttonClass}>
           <ArrowLeft className="w-4 h-4" />
           {label}
         </Button>
@@ -23,7 +25,7 @@ export default function BackButton({ href, onClick, label = "Back" }: BackButton
   }
 
   return (
-    <Button variant="outline" size="sm" onClick={onClick} className="flex items-center gap-2">
+    <Button variant="outline" size="sm" onClick={onClick} className={buttonClass}>
       <ArrowLeft className="w-4 h-4" />
       {label}
     </Button>

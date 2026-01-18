@@ -5,79 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import BackButton from "@/components/BackButton";
-import { useState } from "react";
 
 export default function Home() {
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
-      {/* Navigation */}
-      <nav className="border-b border-white/10 backdrop-blur-sm bg-white/5 sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-3 sm:py-4">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 sm:w-8 sm:h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-xs sm:text-sm">🤖</span>
-              </div>
-              <span className="text-white font-semibold text-sm sm:text-base">Conversational Agent Builder</span>
-            </div>
-            
-            {/* Desktop Navigation */}
-            <div className="hidden sm:flex items-center gap-4 sm:gap-6">
-              <Link href="#features" className="text-gray-300 hover:text-white transition-colors text-sm">
-                Features
-              </Link>
-              <Link href="#templates" className="text-gray-300 hover:text-white transition-colors text-sm">
-                Templates
-              </Link>
-              <Link href="/analytics" className="text-gray-300 hover:text-white transition-colors text-sm">
-                Analytics
-              </Link>
-            </div>
-
-            {/* Mobile Menu Button */}
-            <button
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="sm:hidden flex flex-col gap-1 p-2 text-white hover:bg-white/10 rounded-lg transition-colors"
-            >
-              <span className={`w-5 h-0.5 bg-white transition-transform ${isMobileMenuOpen ? 'rotate-45 translate-y-1.5' : ''}`}></span>
-              <span className={`w-5 h-0.5 bg-white transition-opacity ${isMobileMenuOpen ? 'opacity-0' : ''}`}></span>
-              <span className={`w-5 h-0.5 bg-white transition-transform ${isMobileMenuOpen ? '-rotate-45 -translate-y-1.5' : ''}`}></span>
-            </button>
-          </div>
-
-          {/* Mobile Menu */}
-          {isMobileMenuOpen && (
-            <div className="sm:hidden mt-4 pt-4 border-t border-white/10">
-              <div className="flex flex-col gap-3">
-                <Link 
-                  href="#features" 
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className="text-gray-300 hover:text-white transition-colors text-base py-2 block"
-                >
-                  Features
-                </Link>
-                <Link 
-                  href="#templates" 
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className="text-gray-300 hover:text-white transition-colors text-base py-2 block"
-                >
-                  Templates
-                </Link>
-                <Link 
-                  href="/analytics" 
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className="text-gray-300 hover:text-white transition-colors text-base py-2 block"
-                >
-                  Analytics
-                </Link>
-              </div>
-            </div>
-          )}
-        </div>
-      </nav>
-
       {/* Hero Section */}
       <section className="container mx-auto px-4 py-12 sm:py-16 lg:py-20">
         <div className="text-center mb-8 sm:mb-12 lg:mb-16">

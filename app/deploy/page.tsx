@@ -60,28 +60,20 @@ export default function DeployPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white">
       {/* Header */}
-      <div className="border-b bg-white shadow-sm">
+      <div className="border-b border-white/10 backdrop-blur-sm bg-white/5">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-sm">AI</span>
-              </div>
-              <div>
-                <h1 className="text-xl font-bold text-gray-900">Deploy Your Agent</h1>
-                <p className="text-sm text-gray-500">Production-ready deployment options</p>
-              </div>
+            <div>
+              <h1 className="text-xl font-bold text-white">Deploy Your Agent</h1>
+              <p className="text-sm text-gray-300">Choose deployment option</p>
             </div>
             <div className="flex items-center gap-4">
               <BackButton href="/builder" />
-              <Badge variant="outline" className="text-xs">
+              <Badge className="text-xs bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white border-0">
                 Ready to Deploy
               </Badge>
-              <Button variant="outline" asChild>
-                <Link href="/analytics">View Analytics</Link>
-              </Button>
             </div>
           </div>
         </div>
@@ -92,21 +84,21 @@ export default function DeployPage() {
           {/* Deployment Options */}
           <div className="lg:col-span-2 space-y-6">
             {/* Quick Deploy */}
-            <Card>
+            <Card className="border-white/10 bg-white/5 backdrop-blur-sm">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 text-white">
                   Quick Deploy
-                  <Badge variant="secondary">Recommended</Badge>
+                  <Badge variant="secondary" className="text-xs">Recommended</Badge>
                 </CardTitle>
-                <CardDescription>
+                <CardDescription className="text-gray-300">
                   Get your agent live in 2 minutes with our optimized embed
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <h4 className="font-medium text-blue-900 mb-3">Standard Embed Code</h4>
+                <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
+                  <h4 className="font-medium text-blue-100 mb-3">Standard Embed Code</h4>
                   <div className="relative">
-                    <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg text-sm overflow-x-auto">
+                    <pre className="bg-slate-900 text-gray-100 p-4 rounded-lg text-sm overflow-x-auto">
                       <code>{embedCode}</code>
                     </pre>
                     <Button
@@ -138,10 +130,10 @@ export default function DeployPage() {
 
             {/* Pricing Plans */}
             <div className="space-y-6">
-              <Card>
+              <Card className="border-white/10 bg-white/5 backdrop-blur-sm">
                 <CardHeader>
-                  <CardTitle>💰 Pricing Plans</CardTitle>
-                  <CardDescription>
+                  <CardTitle className="text-white">💰 Pricing Plans</CardTitle>
+                  <CardDescription className="text-gray-300">
                     Choose the right plan for your needs
                   </CardDescription>
                 </CardHeader>
@@ -152,15 +144,15 @@ export default function DeployPage() {
                       onClick={() => setSelectedPlan(plan.id)}
                       className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
                         selectedPlan === plan.id
-                          ? "border-blue-500 bg-blue-50"
-                          : "border-gray-200 hover:border-gray-300"
+                          ? "border-blue-500 bg-blue-500/20"
+                          : "border-gray-600 hover:border-gray-500"
                       } ${plan.recommended ? "ring-2 ring-blue-500 ring-offset-2" : ""}`}
                     >
                       <div className="flex items-center justify-between mb-3">
                         <div>
-                          <h3 className="font-semibold text-lg">{plan.name}</h3>
-                          <p className="text-2xl font-bold text-blue-600">{plan.price}</p>
-                          <p className="text-sm text-gray-600">/month</p>
+                          <h3 className="font-semibold text-lg text-white">{plan.name}</h3>
+                          <p className="text-2xl font-bold text-blue-400">{plan.price}</p>
+                          <p className="text-sm text-gray-300">/month</p>
                         </div>
                         {plan.recommended && (
                           <Badge variant="default" className="text-xs">
@@ -171,7 +163,7 @@ export default function DeployPage() {
                       
                       <ul className="space-y-2">
                         {plan.features.map((feature, idx) => (
-                          <li key={idx} className="flex items-center gap-2 text-sm">
+                          <li key={idx} className="flex items-center gap-2 text-sm text-gray-300">
                             <div className="w-4 h-4 bg-green-500 rounded-full flex-shrink-0"></div>
                             <span>{feature}</span>
                           </li>
@@ -190,37 +182,37 @@ export default function DeployPage() {
               </Card>
 
               {/* Deployment Stats */}
-              <Card>
+              <Card className="border-white/10 bg-white/5 backdrop-blur-sm">
                 <CardHeader>
-                  <CardTitle>📈 Deployment Stats</CardTitle>
-                  <CardDescription>
+                  <CardTitle className="text-white">📈 Deployment Stats</CardTitle>
+                  <CardDescription className="text-gray-300">
                     Live performance metrics
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="text-center p-4 bg-gray-50 rounded-lg">
-                      <div className="text-2xl font-bold text-gray-900">2.3K</div>
-                      <p className="text-sm text-gray-600">Total Deployments</p>
+                    <div className="text-center p-4 bg-white/10 rounded-lg">
+                      <div className="text-2xl font-bold text-white">2.3K</div>
+                      <p className="text-sm text-gray-300">Total Deployments</p>
                     </div>
-                    <div className="text-center p-4 bg-green-50 rounded-lg">
-                      <div className="text-2xl font-bold text-green-600">99.9%</div>
-                      <p className="text-sm text-gray-600">Uptime</p>
+                    <div className="text-center p-4 bg-green-500/10 rounded-lg">
+                      <div className="text-2xl font-bold text-green-400">99.9%</div>
+                      <p className="text-sm text-gray-300">Uptime</p>
                     </div>
                   </div>
                   
                   <div className="space-y-3">
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Avg Response Time</span>
-                      <span className="font-medium">1.2s</span>
+                      <span className="text-gray-300">Avg Response Time</span>
+                      <span className="font-medium text-white">1.2s</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Success Rate</span>
-                      <span className="font-medium text-green-600">98.5%</span>
+                      <span className="text-gray-300">Success Rate</span>
+                      <span className="font-medium text-green-400">98.5%</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">API Calls Today</span>
-                      <span className="font-medium">45.2K</span>
+                      <span className="text-gray-300">API Calls Today</span>
+                      <span className="font-medium text-white">45.2K</span>
                     </div>
                   </div>
                 </CardContent>
@@ -228,10 +220,10 @@ export default function DeployPage() {
             </div>
 
             {/* Customization */}
-            <Card>
+            <Card className="border-white/10 bg-white/5 backdrop-blur-sm">
               <CardHeader>
-                <CardTitle>Customization Options</CardTitle>
-                <CardDescription>
+                <CardTitle className="text-white">Customization Options</CardTitle>
+                <CardDescription className="text-gray-300">
                   Advanced configuration for enterprise deployments
                 </CardDescription>
               </CardHeader>
@@ -245,16 +237,16 @@ export default function DeployPage() {
                   
                   <TabsContent value="appearance" className="space-y-4">
                     <div>
-                      <label className="block text-sm font-medium mb-2">Widget Theme</label>
-                      <select className="w-full p-3 border border-gray-300 rounded-lg">
+                      <label className="block text-sm font-medium mb-2 text-gray-300">Widget Theme</label>
+                      <select className="w-full p-3 border border-white/20 rounded-lg bg-white/10 text-white">
                         <option value="light">Light</option>
                         <option value="dark">Dark</option>
                         <option value="auto">Auto (match website)</option>
                       </select>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium mb-2">Position</label>
-                      <select className="w-full p-3 border border-gray-300 rounded-lg">
+                      <label className="block text-sm font-medium mb-2 text-gray-300">Position</label>
+                      <select className="w-full p-3 border border-white/20 rounded-lg bg-white/10 text-white">
                         <option value="bottom-right">Bottom Right</option>
                         <option value="bottom-left">Bottom Left</option>
                         <option value="top-right">Top Right</option>
@@ -262,61 +254,57 @@ export default function DeployPage() {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium mb-2">Welcome Message</label>
+                      <label className="block text-sm font-medium mb-2 text-gray-300">Welcome Message</label>
                       <input
                         type="text"
                         placeholder="Hello! How can I help you?"
-                        className="w-full p-3 border border-gray-300 rounded-lg"
+                        className="w-full p-3 border border-white/20 rounded-lg bg-white/10 text-white placeholder-gray-400"
                       />
                     </div>
                   </TabsContent>
                   
                   <TabsContent value="behavior" className="space-y-4">
                     <div>
-                      <label className="block text-sm font-medium mb-2">Proactive Message</label>
+                      <label className="block text-sm font-medium mb-2 text-gray-300">Proactive Message</label>
                       <textarea
                         placeholder="Wait 10 seconds before showing..."
-                        className="w-full p-3 border border-gray-300 rounded-lg h-20"
+                        className="w-full p-3 border border-white/20 rounded-lg h-20 bg-white/10 text-white placeholder-gray-400"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium mb-2">Business Hours</label>
+                      <label className="block text-sm font-medium mb-2 text-gray-300">Business Hours</label>
                       <input
                         type="text"
-                        placeholder="9:00 AM - 6:00 PM EST"
-                        className="w-full p-3 border border-gray-300 rounded-lg"
+                        placeholder="9-5, Mon-Fri"
+                        className="w-full p-3 border border-white/20 rounded-lg bg-white/10 text-white placeholder-gray-400"
                       />
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <input type="checkbox" id="escalate" className="rounded" />
-                      <label htmlFor="escalate" className="text-sm">Enable human escalation</label>
                     </div>
                   </TabsContent>
                   
                   <TabsContent value="advanced" className="space-y-4">
                     <div>
-                      <label className="block text-sm font-medium mb-2">Custom Domain</label>
+                      <label className="block text-sm font-medium mb-2 text-gray-300">Custom Domain</label>
                       <div className="flex gap-2">
                         <input
                           type="text"
                           value={customDomain}
                           onChange={(e) => setCustomDomain(e.target.value)}
                           placeholder="your-domain.com"
-                          className="flex-1 p-3 border border-gray-300 rounded-lg"
+                          className="flex-1 p-3 border border-white/20 rounded-lg bg-white/10 text-white placeholder-gray-400"
                         />
                         <Button variant="outline">Verify</Button>
                       </div>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium mb-2">Webhook URL</label>
+                      <label className="block text-sm font-medium mb-2 text-gray-300">Webhook URL</label>
                       <input
                         type="url"
                         placeholder="https://your-domain.com/webhook"
-                        className="w-full p-3 border border-gray-300 rounded-lg"
+                        className="w-full p-3 border border-white/20 rounded-lg bg-white/10 text-white placeholder-gray-400"
                       />
                     </div>
-                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                      <p className="text-sm text-yellow-800">
+                    <div className="bg-yellow-500/10 border border-yellow-600/20 rounded-lg p-3">
+                      <p className="text-sm text-yellow-200">
                         <strong>Advanced Embed:</strong> Use this for custom domains and advanced features
                       </p>
                     </div>
@@ -325,10 +313,10 @@ export default function DeployPage() {
               </CardContent>
             </Card>
 
-            {/* Analytics */}
-            <div className="space-y-6">
+            {/* Action Buttons */}
+            <div className="mt-8 flex justify-center gap-4">
               <Button variant="outline" asChild>
-                <Link href="/analytics">View Analytics</Link>
+                <Link href="/">🏠 Back to Home</Link>
               </Button>
             </div>
           </div>

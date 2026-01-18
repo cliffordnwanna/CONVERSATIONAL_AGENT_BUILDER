@@ -73,34 +73,29 @@ export default function AnalyticsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white">
       {/* Header */}
-      <div className="border-b bg-white shadow-sm">
+      <div className="border-b border-white/10 backdrop-blur-sm bg-white/5">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-sm">AI</span>
-              </div>
-              <div>
-                <h1 className="text-xl font-bold text-gray-900">Analytics Dashboard</h1>
-                <p className="text-sm text-gray-500">Real-time performance metrics</p>
-              </div>
+            <div>
+              <h1 className="text-xl font-bold text-white">Analytics Dashboard</h1>
+              <p className="text-sm text-gray-300">Real-time performance metrics</p>
             </div>
             <div className="flex items-center gap-4">
               <BackButton href="/" />
-              <Badge variant="outline" className="text-xs">
+              <Badge variant="outline" className="text-xs border-white/20 text-gray-300">
                 Live
               </Badge>
               <select
                 value={timeRange}
                 onChange={(e) => setTimeRange(e.target.value)}
-                className="px-3 py-1 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="px-3 py-1 border border-white/20 rounded-lg text-sm bg-slate-800 text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
-                <option value="1h">Last Hour</option>
-                <option value="24h">Last 24 Hours</option>
-                <option value="7d">Last 7 Days</option>
-                <option value="30d">Last 30 Days</option>
+                <option value="1h" className="bg-slate-800 text-white">Last Hour</option>
+                <option value="24h" className="bg-slate-800 text-white">Last 24 Hours</option>
+                <option value="7d" className="bg-slate-800 text-white">Last 7 Days</option>
+                <option value="30d" className="bg-slate-800 text-white">Last 30 Days</option>
               </select>
             </div>
           </div>
@@ -110,66 +105,66 @@ export default function AnalyticsPage() {
       <div className="container mx-auto px-4 py-6">
         {/* Key Metrics */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          <Card className="relative overflow-hidden">
+          <Card className="relative overflow-hidden border-white/10 bg-white/5 backdrop-blur-sm">
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
+              <CardTitle className="text-sm font-medium text-gray-300 flex items-center gap-2">
                 Total Conversations
                 <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-gray-900">
+              <div className="text-3xl font-bold text-white">
                 {formatNumber(analytics.conversations)}
               </div>
-              <p className="text-sm text-green-600 mt-1">
+              <p className="text-sm text-green-400 mt-1">
                 +12% from last period
               </p>
             </CardContent>
           </Card>
 
-          <Card className="relative overflow-hidden">
+          <Card className="relative overflow-hidden border-white/10 bg-white/5 backdrop-blur-sm">
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-gray-600">
+              <CardTitle className="text-sm font-medium text-gray-300">
                 Satisfaction Rate
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-gray-900">
+              <div className="text-3xl font-bold text-white">
                 {satisfactionRate}%
               </div>
-              <p className="text-sm text-blue-600 mt-1">
+              <p className="text-sm text-blue-400 mt-1">
                 Above industry average
               </p>
             </CardContent>
           </Card>
 
-          <Card className="relative overflow-hidden">
+          <Card className="relative overflow-hidden border-white/10 bg-white/5 backdrop-blur-sm">
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-gray-600">
+              <CardTitle className="text-sm font-medium text-gray-300">
                 Avg Response Time
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-gray-900">
+              <div className="text-3xl font-bold text-white">
                 {analytics.avgResponseTime?.toFixed(1)}s
               </div>
-              <p className="text-sm text-green-600 mt-1">
+              <p className="text-sm text-green-400 mt-1">
                 -0.3s improvement
               </p>
             </CardContent>
           </Card>
 
-          <Card className="relative overflow-hidden">
+          <Card className="relative overflow-hidden border-white/10 bg-white/5 backdrop-blur-sm">
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-gray-600">
+              <CardTitle className="text-sm font-medium text-gray-300">
                 Cost Savings
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-gray-900">
+              <div className="text-3xl font-bold text-white">
                 {formatCurrency(analytics.costSavings || 0)}
               </div>
-              <p className="text-sm text-green-600 mt-1">
+              <p className="text-sm text-green-400 mt-1">
                 This month
               </p>
             </CardContent>
@@ -179,10 +174,10 @@ export default function AnalyticsPage() {
         {/* Charts and Detailed Analytics */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
           {/* Conversation Chart */}
-          <Card className="lg:col-span-2">
+          <Card className="lg:col-span-2 border-white/10 bg-white/5 backdrop-blur-sm">
             <CardHeader>
-              <CardTitle>Conversation Volume</CardTitle>
-              <CardDescription>
+              <CardTitle className="text-white">Conversation Volume</CardTitle>
+              <CardDescription className="text-gray-300">
                 Messages per hour over the selected time range
               </CardDescription>
             </CardHeader>
@@ -197,7 +192,7 @@ export default function AnalyticsPage() {
                   />
                 ))}
               </div>
-              <div className="flex justify-between mt-2 text-xs text-gray-500">
+              <div className="flex justify-between mt-2 text-xs text-gray-400">
                 <span>12 AM</span>
                 <span>6 PM</span>
               </div>
@@ -205,32 +200,32 @@ export default function AnalyticsPage() {
           </Card>
 
           {/* Knowledge Base Usage */}
-          <Card>
+          <Card className="border-white/10 bg-white/5 backdrop-blur-sm">
             <CardHeader>
-              <CardTitle>Knowledge Base</CardTitle>
-              <CardDescription>
+              <CardTitle className="text-white">Knowledge Base</CardTitle>
+              <CardDescription className="text-gray-300">
                 How often your knowledge base is used
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="text-center">
-                <div className="text-4xl font-bold text-blue-600 mb-2">
+                <div className="text-4xl font-bold text-blue-400 mb-2">
                   {analytics.knowledgeUsage}%
                 </div>
-                <p className="text-sm text-gray-600">Usage Rate</p>
+                <p className="text-sm text-gray-300">Usage Rate</p>
               </div>
               
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Documents</span>
-                  <span className="font-medium">12</span>
+                  <span className="text-gray-300">Documents</span>
+                  <span className="font-medium text-white">12</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Total Queries</span>
-                  <span className="font-medium">{analytics.conversations}</span>
+                  <span className="text-gray-300">Total Queries</span>
+                  <span className="font-medium text-white">{analytics.conversations}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Knowledge Hits</span>
+                  <span className="text-gray-300">Knowledge Hits</span>
                   <span className="font-medium text-green-600">
                     {Math.floor(analytics.conversations * ((analytics.knowledgeUsage || 0) / 100))}
                   </span>
