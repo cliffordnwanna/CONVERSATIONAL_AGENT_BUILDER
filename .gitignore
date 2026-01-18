@@ -44,7 +44,6 @@ next-env.d.ts
 venv/
 env/
 include/
-lib/
 site-packages/
 Scripts/
 *.pyc
