@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
-import { openai } from "../../../lib/openai";
-import { getSession } from "../../../lib/sessionStore";
-import { salesPrompt } from "../../../prompts/sales";
-import { faqPrompt } from "../../../prompts/faq";
-import { knowledgeStore } from "../../../lib/knowledgeStore";
-import { createEmbedding } from "../../../lib/embeddings";
-import { vectorStore } from "../../../lib/vectorStore";
+import { openai } from "@/lib/openai";
+import { getSession } from "@/lib/sessionStore";
+import { salesPrompt } from "@/prompts/sales";
+import { faqPrompt } from "@/prompts/faq";
+import { knowledgeStore } from "@/lib/knowledgeStore";
+import { createEmbedding } from "@/lib/embeddings";
+import { vectorStore } from "@/lib/vectorStore";
 
 // Semantic knowledge retrieval using RAG
 async function getRelevantKnowledge(query: string, sessionId: string): Promise<string> {

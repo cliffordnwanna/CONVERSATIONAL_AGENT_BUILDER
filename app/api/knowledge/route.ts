@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
-import { knowledgeStore, KnowledgeFile, KnowledgeSource, KnowledgeSession } from "../../../lib/knowledgeStore";
-import { createBatchEmbeddings } from "../../../lib/embeddings";
-import { chunkKnowledge } from "../../../lib/chunking";
-import { vectorStore } from "../../../lib/vectorStore";
+import { knowledgeStore, KnowledgeFile, KnowledgeSource, KnowledgeSession } from "@/lib/knowledgeStore";
+import { createBatchEmbeddings } from "@/lib/embeddings";
+import { chunkKnowledge } from "@/lib/chunking";
+import { vectorStore } from "@/lib/vectorStore";
 
 export async function POST(req: NextRequest) {
   try {
