@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -54,6 +54,7 @@ export default function BuilderClient({ template = "" }: { template?: string }) 
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
   const [analytics, setAnalytics] = useState<Analytics>({
     conversations: 0,
     thumbsUp: 0,
@@ -81,6 +82,16 @@ export default function BuilderClient({ template = "" }: { template?: string }) 
     const id = crypto.randomUUID();
     setSessionId(id);
   }, []);
+
+  // Auto-scroll to bottom when messages change (optimized for Windows)
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ 
+        behavior: 'smooth',
+        block: 'end'
+      });
+    }
+  }, [messages]);
 
   const sendMessage = async () => {
     if (!input.trim() || messages.filter(m => m.role === 'user').length >= 6) return;
@@ -626,7 +637,7 @@ export default function BuilderClient({ template = "" }: { template?: string }) 
 
           {/* Center Panel - Chat */}
           <div className="lg:col-span-2">
-            <Card className="h-[700px] flex flex-col">
+            <Card className="h-[600px] lg:h-[900px] flex flex-col">
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <CardTitle className="flex items-center gap-2">
@@ -668,7 +679,7 @@ export default function BuilderClient({ template = "" }: { template?: string }) 
                         key={idx}
                         className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
                       >
-                        <div className={`max-w-[80%] rounded-2xl px-4 py-3 ${
+                        <div className={`max-w-[85%] sm:max-w-[80%] rounded-2xl px-3 py-3 sm:px-4 ${
                           message.role === "user"
                             ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white"
                             : "bg-gray-100 text-gray-900 border border-gray-200"
