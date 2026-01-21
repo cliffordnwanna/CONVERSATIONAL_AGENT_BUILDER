@@ -152,7 +152,7 @@ export default function AgentConfigurator({ onConfigUpdate, initialTemplate, onC
               <h3 className="text-lg font-semibold mb-4">
                 What&apos;s your primary use case?
               </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-1 lg:grid-cols-2 xl:grid-cols-2 gap-4">
                 {useCases.map((useCase) => (
                   <div
                     key={useCase.id}
@@ -182,7 +182,7 @@ export default function AgentConfigurator({ onConfigUpdate, initialTemplate, onC
               <h3 className="text-lg font-semibold mb-4">
                 How should your agent communicate?
               </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-1 lg:grid-cols-2 xl:grid-cols-2 gap-4">
                 {tones.map((tone) => (
                   <div
                     key={tone.id}
@@ -209,7 +209,7 @@ export default function AgentConfigurator({ onConfigUpdate, initialTemplate, onC
               <h3 className="text-lg font-semibold mb-4">
                 What&apos;s your main goal?
               </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-1 lg:grid-cols-2 xl:grid-cols-2 gap-4">
                 {goals.map((goal) => (
                   <div
                     key={goal.id}
