@@ -586,29 +586,6 @@ export default function BuilderClient({ template = "" }: { template?: string }) 
               renderKnowledgeBaseStep={renderKnowledgeBaseStep}
             />
 
-            {/* Configuration Complete Status */}
-            {isConfigurationComplete && (
-              <Card className="mt-6">
-                <CardHeader>
-                  <CardTitle className="text-lg">Configuration Complete</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="text-center py-6">
-                    <div className="text-4xl mb-4">✅</div>
-                    <h3 className="text-xl font-semibold text-gray-700 mb-2">
-                      Agent Ready!
-                    </h3>
-                    <p className="text-gray-600 mb-6">
-                      Your AI agent is configured and ready to test.
-                    </p>
-                    <Button onClick={handleResetConfiguration} variant="outline" className="w-full">
-                      🔄 Modify Configuration
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
             {/* Quick Stats */}
             <Card>
               <CardHeader>
@@ -637,7 +614,7 @@ export default function BuilderClient({ template = "" }: { template?: string }) 
 
           {/* Center Panel - Chat */}
           <div className="lg:col-span-2">
-            <Card className="h-[600px] lg:h-[900px] flex flex-col">
+            <Card className="h-[600px] lg:h-[1400px] flex flex-col">
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <CardTitle className="flex items-center gap-2">
