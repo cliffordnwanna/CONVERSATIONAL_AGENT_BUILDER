@@ -614,7 +614,7 @@ export default function BuilderClient({ template = "" }: { template?: string }) 
 
           {/* Center Panel - Chat */}
           <div className="lg:col-span-2">
-            <Card className="h-[600px] lg:h-[1400px] flex flex-col">
+            <Card className="h-[600px] lg:h-[1200px] flex flex-col">
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <CardTitle className="flex items-center gap-2">
@@ -745,16 +745,7 @@ export default function BuilderClient({ template = "" }: { template?: string }) 
           </div>
         </div>
 
-        {/* Action Buttons */}
-        <div className="mt-8 flex justify-center gap-4">
-          <Button variant="outline" asChild>
-            <a href="/analytics">📊 View Analytics</a>
-          </Button>
-          <Button variant="outline" asChild>
-            <a href="/deploy">🚀 Deploy Agent</a>
-          </Button>
-        </div>
-      </div>
+              </div>
     </div>
   );
 }
