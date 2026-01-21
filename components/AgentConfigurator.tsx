@@ -280,15 +280,7 @@ export default function AgentConfigurator({ onConfigUpdate, initialTemplate, onC
             <Button onClick={handleNext} disabled={!isStepValid()}>
               Next Step
             </Button>
-          ) : (
-            <Button 
-              onClick={() => onComplete?.()} 
-              disabled={!canCompleteConfiguration()} 
-              className={`${canCompleteConfiguration() ? "bg-green-600 hover:bg-green-700" : "bg-gray-400 cursor-not-allowed"}`}
-            >
-              {canCompleteConfiguration() ? "✅ Complete Configuration" : "⚠️ Complete Configuration"}
-            </Button>
-          )}
+          ) : null}
         </div>
 
         {/* Configuration Summary */}
