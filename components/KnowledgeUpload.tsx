@@ -131,7 +131,7 @@ export default function KnowledgeUpload({ sessionId, onKnowledgeUpdate }: Knowle
                 {files.map((file, index) => (
                   <div
                     key={index}
-                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                    className="flex items-center justify-between p-3 bg-slate-700/50 rounded-lg"
                   >
                     <div className="flex items-center gap-3">
                       <span className="text-2xl">
@@ -193,7 +193,7 @@ export default function KnowledgeUpload({ sessionId, onKnowledgeUpdate }: Knowle
             {uploadedFiles.map((file) => (
               <div
                 key={file.id}
-                className="flex items-center gap-3 p-3 bg-green-50 rounded-lg"
+                className="flex items-center gap-3 p-3 bg-green-500/10 border border-green-500/20 rounded-lg"
               >
                 <span className="text-2xl">
                   {file.type === "application/pdf" ? "📄" : 

@@ -232,14 +232,14 @@ export default function KnowledgeBaseWorkflow({
                               href={source.url}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-xs text-blue-600 underline mb-2 truncate block hover:text-blue-800"
+                              className="text-xs text-blue-400 underline mb-2 truncate block hover:text-blue-300"
                             >
                               {source.url}
                             </a>
                           )}
                           
                           {source.status === "error" && (
-                            <p className="text-xs text-red-600 mb-2">Failed to scrape. Try again.</p>
+                            <p className="text-xs text-red-400 mb-2">Failed to scrape. Try again.</p>
                           )}
                           
                           {source.metadata?.wordCount && (

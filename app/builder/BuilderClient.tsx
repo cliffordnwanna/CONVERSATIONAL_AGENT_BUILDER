@@ -536,7 +536,7 @@ export default function BuilderClient({ template = "" }: { template?: string }) 
                             ✅ {item.metadata.chunksCreated} chunks
                           </p>
                         )}
-                        <p className="text-xs text-blue-600">
+                        <p className="text-xs text-blue-400">
                           🆔 {item.id.substring(0, 8)}
                         </p>
                       </div>
@@ -545,7 +545,7 @@ export default function BuilderClient({ template = "" }: { template?: string }) 
                       variant="ghost"
                       size="sm"
                       onClick={() => handleDeleteKnowledge(item.id)}
-                      className="ml-2 h-6 w-6 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                      className="ml-2 h-6 w-6 p-0 text-red-400 hover:text-red-300 hover:bg-red-500/20"
                     >
                       ×
                     </Button>
