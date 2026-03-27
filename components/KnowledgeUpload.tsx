@@ -116,10 +116,10 @@ export default function KnowledgeUpload({ sessionId, onKnowledgeUpdate }: Knowle
                 className="cursor-pointer flex flex-col items-center"
               >
                 <div className="text-4xl mb-2">📁</div>
-                <p className="text-lg font-medium text-gray-700 mb-1">
+                <p className="text-lg font-medium text-gray-200 mb-1">
                   Click to upload or drag and drop
                 </p>
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-gray-400">
                   PDF, TXT, DOCX (Max 3MB per file)
                 </p>
               </label>

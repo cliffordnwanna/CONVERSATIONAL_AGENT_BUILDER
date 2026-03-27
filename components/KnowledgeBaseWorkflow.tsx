@@ -274,24 +274,24 @@ export default function KnowledgeBaseWorkflow({
               </div>
               
               {sources.length > 0 && (
-                <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-                  <h4 className="font-medium mb-2">Knowledge Base Summary</h4>
+                <div className="mt-6 p-4 bg-slate-700/50 rounded-lg border border-slate-600">
+                  <h4 className="font-medium text-white mb-2">Knowledge Base Summary</h4>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                     <div>
-                      <span className="text-gray-600">Total Sources:</span>
-                      <span className="font-medium">{sources.length}</span>
+                      <span className="text-gray-300">Total Sources:</span>
+                      <span className="font-medium text-white">{sources.length}</span>
                     </div>
                     <div>
-                      <span className="text-gray-600">Websites:</span>
-                      <span className="font-medium">{sources.filter(s => s.type === "url").length}</span>
+                      <span className="text-gray-300">Websites:</span>
+                      <span className="font-medium text-white">{sources.filter(s => s.type === "url").length}</span>
                     </div>
                     <div>
-                      <span className="text-gray-600">Text Docs:</span>
-                      <span className="font-medium">{sources.filter(s => s.type === "text").length}</span>
+                      <span className="text-gray-300">Text Docs:</span>
+                      <span className="font-medium text-white">{sources.filter(s => s.type === "text").length}</span>
                     </div>
                     <div>
-                      <span className="text-gray-600">Total Words:</span>
-                      <span className="font-medium">
+                      <span className="text-gray-300">Total Words:</span>
+                      <span className="font-medium text-white">
                         {sources.reduce((acc, s) => acc + (s.metadata?.wordCount || 0), 0).toLocaleString()}
                       </span>
                     </div>

@@ -384,10 +384,10 @@ export default function BuilderClient({ template = "" }: { template?: string }) 
   const renderKnowledgeBaseStep = () => (
     <div className="space-y-4">
       <div>
-        <h3 className="text-sm font-semibold text-gray-900 mb-2">
+        <h3 className="text-sm font-semibold text-white mb-2">
           🧠 Knowledge Base Workflow
         </h3>
-        <p className="text-xs text-gray-600 mb-4">
+        <p className="text-xs text-gray-300 mb-4">
           <Badge variant="secondary" className="mr-2">{knowledge.length} Sources</Badge>
           Add knowledge from websites, plain text, or documents. AI agents will use this information for accurate responses.
         </p>
@@ -415,7 +415,7 @@ export default function BuilderClient({ template = "" }: { template?: string }) 
 
         <TabsContent value="website" className="space-y-3 mt-4">
           <div>
-            <label className="text-xs font-medium text-gray-700 mb-1 block">
+            <label className="text-xs font-medium text-gray-300 mb-1 block">
               Website URL
             </label>
             <Input
@@ -434,13 +434,13 @@ export default function BuilderClient({ template = "" }: { template?: string }) 
           >
             {isProcessing ? "🕷️ Scraping..." : "🕷️ Scrape Website"}
           </Button>
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-gray-400">
             Extracts main content from website. Supports documentation sites, blogs, and company pages.
           </p>
         </TabsContent>
 
         <TabsContent value="upload" className="space-y-3 mt-4">
-          <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-400 transition-colors">
+          <div className="border-2 border-dashed border-slate-500 rounded-lg p-6 text-center hover:border-blue-400 transition-colors">
             <input
               type="file"
               id="file-upload"
@@ -455,22 +455,22 @@ export default function BuilderClient({ template = "" }: { template?: string }) 
               className="cursor-pointer block"
             >
               <Upload className="w-8 h-8 mx-auto mb-2 text-gray-400" />
-              <p className="text-sm font-medium text-gray-700 mb-1">
+              <p className="text-sm font-medium text-gray-200 mb-1">
                 📁 Click to upload or drag and drop
               </p>
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-gray-400">
                 PDF, TXT, DOCX, MD (Max 3MB per file)
               </p>
             </label>
           </div>
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-gray-400">
             Max 5 files • 10MB total
           </p>
         </TabsContent>
 
         <TabsContent value="text" className="space-y-3 mt-4">
           <div>
-            <label className="text-xs font-medium text-gray-700 mb-1 block">
+            <label className="text-xs font-medium text-gray-300 mb-1 block">
               Paste your text content
             </label>
             <Textarea
@@ -492,15 +492,15 @@ export default function BuilderClient({ template = "" }: { template?: string }) 
 
         <TabsContent value="manage" className="space-y-3 mt-4">
           {knowledge.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
-              <FolderOpen className="w-12 h-12 mx-auto mb-2 text-gray-300" />
+            <div className="text-center py-8 text-gray-400">
+              <FolderOpen className="w-12 h-12 mx-auto mb-2 text-gray-500" />
               <p className="text-sm">No knowledge sources yet</p>
-              <p className="text-xs">Add sources from the other tabs</p>
+              <p className="text-xs text-gray-500">Add sources from the other tabs</p>
             </div>
           ) : (
             <div className="space-y-2">
               <div className="flex items-center justify-between mb-3">
-                <p className="text-xs font-semibold text-gray-700">
+                <p className="text-xs font-semibold text-gray-200">
                   {knowledge.length} {knowledge.length === 1 ? 'Source' : 'Sources'} Added
                 </p>
                 <Badge variant="default" className="text-xs">
@@ -511,19 +511,19 @@ export default function BuilderClient({ template = "" }: { template?: string }) 
                 {knowledge.map((item) => (
                   <div 
                     key={item.id}
-                    className="flex items-start justify-between p-3 bg-gray-50 rounded-lg border border-gray-200"
+                    className="flex items-start justify-between p-3 bg-slate-700/50 rounded-lg border border-slate-600"
                   >
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
-                        {item.type === "url" && <Globe className="w-3 h-3 text-blue-500" />}
-                        {item.type === "file" && <Upload className="w-3 h-3 text-green-500" />}
-                        {item.type === "text" && <FileText className="w-3 h-3 text-purple-500" />}
-                        <p className="text-xs font-medium text-gray-900 truncate">
+                        {item.type === "url" && <Globe className="w-3 h-3 text-blue-400" />}
+                        {item.type === "file" && <Upload className="w-3 h-3 text-green-400" />}
+                        {item.type === "text" && <FileText className="w-3 h-3 text-purple-400" />}
+                        <p className="text-xs font-medium text-white truncate">
                           {item.title}
                         </p>
                       </div>
                       {item.source && (
-                        <p className="text-xs text-gray-500 truncate">{item.source}</p>
+                        <p className="text-xs text-gray-400 truncate">{item.source}</p>
                       )}
                       <div className="flex items-center gap-3 mt-1">
                         {item.metadata?.wordCount && (
@@ -532,7 +532,7 @@ export default function BuilderClient({ template = "" }: { template?: string }) 
                           </p>
                         )}
                         {item.metadata?.chunksCreated && (
-                          <p className="text-xs text-green-600">
+                          <p className="text-xs text-green-400">
                             ✅ {item.metadata.chunksCreated} chunks
                           </p>
                         )}
@@ -584,7 +584,7 @@ export default function BuilderClient({ template = "" }: { template?: string }) 
       </div>
 
       <div className="container mx-auto px-4 py-6">
-        <div className="grid lg:grid-cols-3 gap-6">
+        <div className="grid lg:grid-cols-3 gap-6 lg:items-stretch">
           {/* Left Panel - Configuration ONLY */}
           <div className="lg:col-span-1 space-y-6">
             {/* Agent Configuration with Knowledge Base as Step 4 */}
@@ -625,8 +625,8 @@ export default function BuilderClient({ template = "" }: { template?: string }) 
           </div>
 
           {/* Center Panel - Chat */}
-          <div className="lg:col-span-2">
-            <Card className="h-[600px] lg:h-[750px] flex flex-col border-white/10 bg-slate-800/80 backdrop-blur-sm">
+          <div className="lg:col-span-2 flex flex-col">
+            <Card className="flex-1 flex flex-col border-white/10 bg-slate-800/80 backdrop-blur-sm min-h-[600px]">
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <CardTitle className="flex items-center gap-2 text-white">
