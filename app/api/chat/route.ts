@@ -111,6 +111,15 @@ async function getRelevantKnowledge(query: string, sessionId: string, knowledgeI
   }
 }
 
+// Extract chunk previews for the frontend
+function getChunkPreviews(sessionId: string, queryEmbedding: number[]): { source: string; preview: string }[] {
+  const relevantChunks = vectorStore.search(sessionId, queryEmbedding, 3);
+  return relevantChunks.map(chunk => ({
+    source: chunk.metadata.source,
+    preview: chunk.content.substring(0, 120) + (chunk.content.length > 120 ? "..." : ""),
+  }));
+}
+
 export async function POST(req: Request) {
   try {
     const { sessionId, message, type, knowledgeIds, hasKnowledge } = await req.json();
@@ -129,6 +138,17 @@ export async function POST(req: Request) {
     
     // Get relevant knowledge using specific knowledge IDs
     const relevantKnowledge = await getRelevantKnowledge(message, sessionId, knowledgeIds);
+    
+    // Get chunk previews for the frontend (proof of RAG)
+    let chunkPreviews: { source: string; preview: string }[] = [];
+    if (relevantKnowledge.length > 0) {
+      try {
+        const queryEmbedding = await createEmbedding(message);
+        chunkPreviews = getChunkPreviews(sessionId, queryEmbedding);
+      } catch {
+        // Non-critical — skip if embedding fails
+      }
+    }
     
     console.log("🔍 Chat Response Debug:", {
       relevantKnowledgeLength: relevantKnowledge.length,
@@ -173,6 +193,7 @@ export async function POST(req: Request) {
         chunks: relevantKnowledge.length, // Send chunk count for debugging
         usedKnowledge: relevantKnowledge.length > 0
       },
+      chunkPreviews, // Retrieved sources for frontend display
       sessionId,
     });
 

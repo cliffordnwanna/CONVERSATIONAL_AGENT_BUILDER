@@ -114,15 +114,15 @@ export default function DeployPage() {
                 <div className="mt-4 space-y-2">
                   <div className="flex items-center gap-2">
                     <div className="w-4 h-4 bg-green-500 rounded-full"></div>
-                    <span className="text-sm text-gray-700">Auto-responsive design</span>
+                    <span className="text-sm text-gray-200">Auto-responsive design</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="w-4 h-4 bg-green-500 rounded-full"></div>
-                    <span className="text-sm text-gray-700">No coding required</span>
+                    <span className="text-sm text-gray-200">No coding required</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="w-4 h-4 bg-green-500 rounded-full"></div>
-                    <span className="text-sm text-gray-700">Works on all websites</span>
+                    <span className="text-sm text-gray-200">Works on all websites</span>
                   </div>
                 </div>
               </CardContent>
@@ -146,7 +146,7 @@ export default function DeployPage() {
                         selectedPlan === plan.id
                           ? "border-blue-500 bg-blue-500/20"
                           : "border-gray-600 hover:border-gray-500"
-                      } ${plan.recommended ? "ring-2 ring-blue-500 ring-offset-2" : ""}`}
+                      } ${plan.recommended ? "ring-2 ring-blue-500 ring-offset-2 ring-offset-slate-900" : ""}`}
                     >
                       <div className="flex items-center justify-between mb-3">
                         <div>

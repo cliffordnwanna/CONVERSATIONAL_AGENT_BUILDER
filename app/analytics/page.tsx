@@ -226,7 +226,7 @@ export default function AnalyticsPage() {
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-300">Knowledge Hits</span>
-                  <span className="font-medium text-green-600">
+                  <span className="font-medium text-green-400">
                     {Math.floor(analytics.conversations * ((analytics.knowledgeUsage || 0) / 100))}
                   </span>
                 </div>
@@ -236,36 +236,36 @@ export default function AnalyticsPage() {
         </div>
 
         {/* Recent Sessions */}
-        <Card>
+        <Card className="border-white/10 bg-white/5 backdrop-blur-sm">
           <CardHeader>
-            <CardTitle>Recent Sessions</CardTitle>
-            <CardDescription>
+            <CardTitle className="text-white">Recent Sessions</CardTitle>
+            <CardDescription className="text-gray-300">
               Latest agent interactions and performance
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
               {sessions.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
+                <div className="text-center py-8 text-gray-400">
                   No sessions recorded yet
                 </div>
               ) : (
                 sessions.map((session) => (
                   <div
                     key={session.id}
-                    className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                    className="flex items-center justify-between p-4 bg-white/5 rounded-lg hover:bg-white/10 transition-colors"
                   >
                     <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                      <div className="w-10 h-10 bg-blue-500/20 rounded-full flex items-center justify-center">
                         <span className="text-lg">
                           {session.satisfaction ? "😊" : "😐"}
                         </span>
                       </div>
                       <div>
-                        <p className="font-medium text-gray-900">
+                        <p className="font-medium text-white">
                           {new Date(session.timestamp).toLocaleString()}
                         </p>
-                        <p className="text-sm text-gray-600">
+                        <p className="text-sm text-gray-400">
                           {session.messages} messages • {session.usedKnowledge ? "Used KB" : "General"}
                         </p>
                       </div>
@@ -287,30 +287,30 @@ export default function AnalyticsPage() {
 
         {/* Performance Insights */}
         <div className="grid md:grid-cols-2 gap-6 mt-8">
-          <Card>
+          <Card className="border-white/10 bg-white/5 backdrop-blur-sm">
             <CardHeader>
-              <CardTitle>Performance Insights</CardTitle>
+              <CardTitle className="text-white">Performance Insights</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                  <span className="text-green-600 font-bold">✓</span>
+                <div className="w-8 h-8 bg-green-500/20 rounded-full flex items-center justify-center">
+                  <span className="text-green-400 font-bold">✓</span>
                 </div>
                 <div>
-                  <p className="font-medium text-gray-900">Excellent Response Time</p>
-                  <p className="text-sm text-gray-600">
+                  <p className="font-medium text-white">Excellent Response Time</p>
+                  <p className="text-sm text-gray-400">
                     Under 2 seconds average
                   </p>
                 </div>
               </div>
               
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                  <span className="text-blue-600 font-bold">📈</span>
+                <div className="w-8 h-8 bg-blue-500/20 rounded-full flex items-center justify-center">
+                  <span className="text-blue-400 font-bold">📈</span>
                 </div>
                 <div>
-                  <p className="font-medium text-gray-900">High Knowledge Usage</p>
-                  <p className="text-sm text-gray-600">
+                  <p className="font-medium text-white">High Knowledge Usage</p>
+                  <p className="text-sm text-gray-400">
                     {analytics.knowledgeUsage}% of queries
                   </p>
                 </div>
@@ -318,28 +318,28 @@ export default function AnalyticsPage() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="border-white/10 bg-white/5 backdrop-blur-sm">
             <CardHeader>
-              <CardTitle>ROI Calculator</CardTitle>
+              <CardTitle className="text-white">ROI Calculator</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="text-center">
-                <p className="text-3xl font-bold text-green-600">
+                <p className="text-3xl font-bold text-green-400">
                   {formatCurrency((analytics.costSavings || 0) * 12)}
                 </p>
-                <p className="text-sm text-gray-600">Annual Savings</p>
+                <p className="text-sm text-gray-300">Annual Savings</p>
               </div>
               
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Human Hours Saved</span>
-                  <span className="font-medium">
+                  <span className="text-gray-300">Human Hours Saved</span>
+                  <span className="font-medium text-white">
                     {formatNumber(Math.floor(analytics.conversations * 0.5))} hrs
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Efficiency Gain</span>
-                  <span className="font-medium text-green-600">+67%</span>
+                  <span className="text-gray-300">Efficiency Gain</span>
+                  <span className="font-medium text-green-400">+67%</span>
                 </div>
               </div>
             </CardContent>
@@ -348,13 +348,13 @@ export default function AnalyticsPage() {
 
         {/* Action Buttons */}
         <div className="mt-8 flex justify-center gap-4">
-          <Button asChild>
+          <Button asChild className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white">
             <Link href="/builder"> Build Another Agent</Link>
           </Button>
-          <Button variant="outline" asChild>
+          <Button variant="outline" asChild className="border-white/20 text-gray-200 hover:bg-white/10">
             <Link href="/deploy"> Deploy to Production</Link>
           </Button>
-          <Button variant="outline" asChild>
+          <Button variant="outline" asChild className="border-white/20 text-gray-200 hover:bg-white/10">
             <Link href="/"> Export Report</Link>
           </Button>
         </div>

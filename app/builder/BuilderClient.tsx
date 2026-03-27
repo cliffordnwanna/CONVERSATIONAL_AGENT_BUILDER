@@ -34,6 +34,7 @@ interface Message {
   timestamp: string;
   usedKnowledge?: boolean;
   sources?: string[];
+  chunkPreviews?: { source: string; preview: string }[];
 }
 
 interface Analytics {
@@ -161,6 +162,7 @@ export default function BuilderClient({ template = "" }: { template?: string }) 
         timestamp: new Date().toISOString(),
         usedKnowledge: data.analytics?.usedKnowledge || false,
         sources: data.sources || [],
+        chunkPreviews: data.chunkPreviews || [],
       };
       
       setMessages(prev => [...prev, userMessage, assistantMessage]);
@@ -168,6 +170,13 @@ export default function BuilderClient({ template = "" }: { template?: string }) 
       setInput("");
     } catch (error) {
       console.error("Error sending message:", error);
+      const errorMessage: Message = {
+        role: "assistant",
+        content: "Sorry, something went wrong. Please try again.",
+        timestamp: new Date().toISOString(),
+      };
+      setMessages(prev => [...prev, { role: "user", content: input, timestamp: new Date().toISOString() }, errorMessage]);
+      setInput("");
     } finally {
       setIsLoading(false);
     }
@@ -240,6 +249,7 @@ export default function BuilderClient({ template = "" }: { template?: string }) 
       setWebsiteUrl("");
     } catch (error) {
       console.error("Error scraping website:", error);
+      alert("Failed to scrape website. Please check the URL and try again.");
     } finally {
       setIsProcessing(false);
     }
@@ -303,6 +313,7 @@ export default function BuilderClient({ template = "" }: { template?: string }) 
         });
       } catch (error) {
         console.error("❌ Error processing file:", error);
+        alert(`Failed to upload ${file.name}. Please try again.`);
       }
     }
     
@@ -348,6 +359,7 @@ export default function BuilderClient({ template = "" }: { template?: string }) 
       setTextContent("");
     } catch (error) {
       console.error("Error adding text:", error);
+      alert("Failed to add text content. Please try again.");
     } finally {
       setIsProcessing(false);
     }
@@ -548,7 +560,7 @@ export default function BuilderClient({ template = "" }: { template?: string }) 
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
       {/* Header */}
       <div className="border-b border-white/10 backdrop-blur-sm bg-white/5">
         <div className="container mx-auto px-4 py-4">
@@ -587,23 +599,23 @@ export default function BuilderClient({ template = "" }: { template?: string }) 
             />
 
             {/* Quick Stats */}
-            <Card>
+            <Card className="border-white/10 bg-white/5 backdrop-blur-sm">
               <CardHeader>
-                <CardTitle className="text-lg">Session Stats</CardTitle>
+                <CardTitle className="text-lg text-white">Session Stats</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
                   <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Messages</span>
-                    <span className="font-semibold">{messages.filter(m => m.role === 'user').length}/6</span>
+                    <span className="text-sm text-gray-300">Messages</span>
+                    <span className="font-semibold text-white">{messages.filter(m => m.role === 'user').length}/6</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">👍 Satisfaction</span>
-                    <span className="font-semibold text-green-600">{analytics.thumbsUp}</span>
+                    <span className="text-sm text-gray-300">👍 Satisfaction</span>
+                    <span className="font-semibold text-green-400">{analytics.thumbsUp}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Knowledge Used</span>
-                    <span className="font-semibold text-blue-600">
+                    <span className="text-sm text-gray-300">Knowledge Used</span>
+                    <span className="font-semibold text-blue-400">
                       {messages.filter(m => m.usedKnowledge).length}
                     </span>
                   </div>
@@ -614,10 +626,10 @@ export default function BuilderClient({ template = "" }: { template?: string }) 
 
           {/* Center Panel - Chat */}
           <div className="lg:col-span-2">
-            <Card className="h-[600px] lg:h-[1200px] flex flex-col">
+            <Card className="h-[600px] lg:h-[750px] flex flex-col border-white/10 bg-slate-800/80 backdrop-blur-sm">
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center gap-2">
+                  <CardTitle className="flex items-center gap-2 text-white">
                     💬 Chat Preview
                     {agentConfig.useCase && (
                       <Badge variant="outline">
@@ -639,14 +651,14 @@ export default function BuilderClient({ template = "" }: { template?: string }) 
               </CardHeader>
               <CardContent className="flex-1 flex flex-col p-0 overflow-y-auto">
                 {/* Messages Area */}
-                <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-900/50">
                   {messages.length === 0 ? (
                     <div className="text-center py-12">
                       <div className="text-6xl mb-4">🤖</div>
-                      <h3 className="text-xl font-semibold text-gray-700 mb-2">
+                      <h3 className="text-xl font-semibold text-gray-300 mb-2">
                         Ready to test your AI agent!
                       </h3>
-                      <p className="text-gray-500 max-w-md mx-auto">
+                      <p className="text-gray-400 max-w-md mx-auto">
                         Configure your agent and upload knowledge base, then start a conversation to see how it responds.
                       </p>
                     </div>
@@ -656,23 +668,35 @@ export default function BuilderClient({ template = "" }: { template?: string }) 
                         key={idx}
                         className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
                       >
-                        <div className={`max-w-[85%] sm:max-w-[80%] rounded-2xl px-3 py-3 sm:px-4 ${
+                        <div className={`max-w-[85%] sm:max-w-[80%] rounded-2xl px-4 py-3 ${
                           message.role === "user"
-                            ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white"
-                            : "bg-gray-100 text-gray-900 border border-gray-200"
+                            ? "bg-gradient-to-r from-purple-600 to-blue-600 text-white"
+                            : "bg-slate-700 text-gray-100 border border-slate-600"
                         }`}>
                           {message.usedKnowledge && (
                             <div className="flex items-center gap-2 mb-2 text-xs">
                               <Badge variant="secondary" className="text-xs">
-                                Used Knowledge Base
+                                🧠 Used Knowledge Base
                               </Badge>
                             </div>
                           )}
 
                           <p className="text-sm leading-relaxed">{message.content}</p>
 
+                          {message.chunkPreviews && message.chunkPreviews.length > 0 && (
+                            <div className="mt-3 pt-2 border-t border-white/10 space-y-1">
+                              <p className="text-xs font-medium text-gray-400">📚 Sources used:</p>
+                              {message.chunkPreviews.map((chunk, i) => (
+                                <div key={i} className="text-xs text-gray-400 bg-white/5 rounded px-2 py-1">
+                                  <span className="font-medium text-gray-300">{chunk.source}:</span>{" "}
+                                  {chunk.preview}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
                           {message.role === "assistant" && message.sources && message.sources.length > 0 && (
-                            <div className="mt-2 text-xs text-gray-500">
+                            <div className="mt-2 text-xs text-gray-400">
                               <span className="font-medium">Source:</span>{" "}
                               {message.sources.join(", ")}
                             </div>
@@ -688,7 +712,7 @@ export default function BuilderClient({ template = "" }: { template?: string }) 
                 </div>
 
                 {/* Input Area */}
-                <div className="border-t border-gray-200 p-4">
+                <div className="border-t border-slate-700 p-4 bg-slate-800">
                   <div className="flex gap-3">
                     <Textarea
                       value={input}
@@ -706,14 +730,16 @@ export default function BuilderClient({ template = "" }: { template?: string }) 
                     <Button 
                       onClick={sendMessage} 
                       disabled={!input.trim() || isLoading || messages.filter(m => m.role === 'user').length >= 6}
-                      className="self-end"
+                      className="self-end flex items-center justify-center gap-2 px-6"
                     >
-                      {isLoading ? "..." : "Send"}
+                      {isLoading ? (
+                        <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Thinking...</>
+                      ) : "Send"}
                     </Button>
                   </div>
                   
                   <div className="flex justify-between items-center mt-2">
-                    <span className="text-xs text-gray-500">
+                    <span className="text-xs text-gray-400">
                       {messages.filter(m => m.role === 'user').length >= 6 
                         ? "Session limit reached (6 messages)"
                         : `${messages.filter(m => m.role === 'user').length}/6 messages used`
