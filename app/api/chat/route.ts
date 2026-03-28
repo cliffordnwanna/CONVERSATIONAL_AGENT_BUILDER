@@ -122,7 +122,7 @@ function getChunkPreviews(sessionId: string, queryEmbedding: number[]): { source
 
 export async function POST(req: Request) {
   try {
-    const { sessionId, message, type, knowledgeIds, hasKnowledge } = await req.json();
+    const { sessionId, message, type, knowledgeIds, hasKnowledge, knowledgeContent } = await req.json();
 
     console.log("🔍 Chat Request Debug:", {
       sessionId,
@@ -130,13 +130,14 @@ export async function POST(req: Request) {
       type,
       knowledgeIds,
       hasKnowledge,
-      knowledgeCount: knowledgeIds?.length || 0
+      knowledgeCount: knowledgeIds?.length || 0,
+      inlineKnowledge: knowledgeContent?.length || 0,
     });
 
     // Track activity for analytics
     const now = Date.now();
     
-    // Get relevant knowledge using specific knowledge IDs
+    // Get relevant knowledge — try in-memory store first, fall back to inline content
     let relevantKnowledge = "";
     let chunkPreviews: { source: string; preview: string }[] = [];
     
@@ -154,6 +155,22 @@ export async function POST(req: Request) {
       }
     } catch (e) {
       console.error("❌ Knowledge retrieval failed (non-critical):", e);
+    }
+    
+    // Fallback: use inline knowledge content from client (essential for serverless/Vercel)
+    if (relevantKnowledge.length === 0 && knowledgeContent && knowledgeContent.length > 0) {
+      console.log("📦 Using inline knowledge from client (", knowledgeContent.length, "sources)");
+      relevantKnowledge = knowledgeContent
+        .map((k: { title: string; content: string; source?: string }) => 
+          `Source: ${k.source || k.title}\n${k.content}`
+        )
+        .join("\n---\n")
+        .substring(0, 12000);
+      
+      chunkPreviews = knowledgeContent.map((k: { title: string; content: string; source?: string }) => ({
+        source: k.source || k.title,
+        preview: k.content.substring(0, 120) + (k.content.length > 120 ? "..." : ""),
+      }));
     }
     
     console.log("🔍 Chat Response Debug:", {

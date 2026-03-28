@@ -134,8 +134,15 @@ export default function BuilderClient({ template = "" }: { template?: string }) 
           sessionId,
           message: normalizedInput,
           type: agentConfig.useCase || "support",
-          knowledgeIds, // Pass knowledge IDs for RAG lookup
-          hasKnowledge: knowledge.length > 0, // Flag to enable RAG
+          knowledgeIds,
+          hasKnowledge: knowledge.length > 0,
+          // Send knowledge content directly so RAG works on serverless (Vercel)
+          knowledgeContent: knowledge.map(k => ({
+            title: k.title,
+            content: k.content.substring(0, 8000),
+            type: k.type,
+            source: k.source || k.title,
+          })),
         }),
       });
 
