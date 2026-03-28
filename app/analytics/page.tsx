@@ -35,26 +35,25 @@ export default function AnalyticsPage() {
     costSavings: 2847.50,
   });
 
-  const [sessions] = useState<SessionData[]>(() => [
+  const [sessions] = useState<SessionData[]>([
     {
-      id: crypto.randomUUID(),
-      timestamp: new Date(Date.now() - 86400000).toISOString(), // 24 hours ago
+      id: "session-001",
+      timestamp: "2026-03-26T10:30:00.000Z",
       messages: 3,
       satisfaction: 1,
       usedKnowledge: true,
     },
     {
-      id: crypto.randomUUID(),
-      timestamp: new Date(Date.now() - 172800000).toISOString(), // 48 hours ago
+      id: "session-002",
+      timestamp: "2026-03-25T14:15:00.000Z",
       messages: 2,
       satisfaction: 1,
       usedKnowledge: false,
     },
-    // Add more static sessions...
   ]);
   const [timeRange, setTimeRange] = useState("24h");
-  const [barHeights] = useState<number[]>(() =>
-    Array.from({ length: 24 }, () => Math.floor(Math.random() * 60 + 20))
+  const [barHeights] = useState<number[]>(
+    [45, 30, 25, 20, 35, 50, 65, 70, 80, 55, 40, 60, 75, 50, 45, 35, 55, 70, 65, 50, 40, 30, 25, 35]
   );
 
   const satisfactionRate = analytics.conversations > 0 
