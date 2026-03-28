@@ -158,7 +158,7 @@ export default function BuilderClient({ template = "" }: { template?: string }) 
       
       const assistantMessage: Message = {
         role: "assistant",
-        content: data.reply,
+        content: data.reply || data.error || "Sorry, something went wrong. Please try again.",
         timestamp: new Date().toISOString(),
         usedKnowledge: data.analytics?.usedKnowledge || false,
         sources: data.sources || [],
@@ -166,7 +166,9 @@ export default function BuilderClient({ template = "" }: { template?: string }) 
       };
       
       setMessages(prev => [...prev, userMessage, assistantMessage]);
-      setAnalytics(data.analytics);
+      if (data.analytics) {
+        setAnalytics(prev => ({ ...prev, ...data.analytics }));
+      }
       setInput("");
     } catch (error) {
       console.error("Error sending message:", error);
