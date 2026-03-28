@@ -28,22 +28,16 @@ export async function POST(req: NextRequest) {
       let content = "";
       const fileType = file.type;
       
-      if (fileType === "application/pdf") {
+      if (fileType === "application/pdf" || file.name.endsWith(".pdf")) {
         try {
-          // Simple PDF text extraction approach
-          const bufferString = buffer.toString('utf-8');
-          
-          // Extract readable text from PDF (basic approach)
-          const textMatches = bufferString.match(/[a-zA-Z0-9\s.,;:!?'"()-]+/g);
-          const extractedText = textMatches ? textMatches.join(' ') : '';
-          
-          // Clean up of extracted text
-          content = extractedText
-            .replace(/[^\w\s.,;:!?'"()-]/g, '')
+          const { PDFParse } = await import('pdf-parse');
+          const parser = new PDFParse({ data: new Uint8Array(buffer) });
+          const result = await parser.getText();
+          content = result.text
             .replace(/\s+/g, ' ')
             .trim()
-            .substring(0, 2000); // Limit content size
-            
+            .substring(0, 50000);
+          console.log("📄 PDF parsed successfully:", { textLength: content.length });
         } catch (error) {
           console.error("PDF parsing error:", error);
           content = `PDF uploaded: ${file.name}. Text extraction failed.`;
@@ -51,18 +45,24 @@ export async function POST(req: NextRequest) {
       } else if (fileType === "text/plain" || file.name.endsWith(".txt")) {
         content = buffer.toString("utf-8");
       } else if (fileType.includes("word") || file.name.endsWith(".docx")) {
-        // For DOCX, try basic text extraction
         try {
+          // DOCX is a ZIP of XML files; try to extract readable text
+          // Look for XML text content between <w:t> tags (Word paragraph text)
           const bufferString = buffer.toString('utf-8');
-          const textMatches = bufferString.match(/[a-zA-Z0-9\s.,;:!?'"()-]+/g);
-          const extractedText = textMatches ? textMatches.join(' ') : '';
-          
-          content = extractedText
-            .replace(/[^\w\s.,;:!?'"()-]/g, '')
-            .replace(/\s+/g, ' ')
-            .trim()
-            .substring(0, 2000);
-            
+          const wtMatches = bufferString.match(/<w:t[^>]*>([^<]+)<\/w:t>/g);
+          if (wtMatches && wtMatches.length > 0) {
+            content = wtMatches
+              .map(m => m.replace(/<[^>]+>/g, ''))
+              .join(' ')
+              .replace(/\s+/g, ' ')
+              .trim()
+              .substring(0, 50000);
+          } else {
+            // Fallback: extract any readable text
+            const textMatches = bufferString.match(/[a-zA-Z0-9\s.,;:!?'"()-]{10,}/g);
+            content = textMatches ? textMatches.join(' ').replace(/\s+/g, ' ').trim().substring(0, 50000) : '';
+          }
+          console.log("📄 DOCX parsed:", { textLength: content.length });
         } catch (error) {
           console.error("DOCX parsing error:", error);
           content = "DOCX file uploaded. Text extraction failed.";
