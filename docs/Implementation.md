@@ -1,3 +1,5 @@
+> Historical implementation plan. The current implementation, setup, verification commands, and remaining production requirements are documented in [README](../README.md). This document is not a completion or deployment claim.
+
 Perfect. Below is the **exact MVP build plan** you can follow **inside Windsurf + Cascade** and ship **within 1 day**.
 No guesswork. No over-engineering. This is **speed-first, portfolio-grade**.
 

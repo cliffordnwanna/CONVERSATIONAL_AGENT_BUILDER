@@ -1,4 +1,10 @@
-Here's a comprehensive master test prompt to validate your AI Engineering demo:
+# Testing the current demo
+
+Run `npm test`, `npm run eval`, `npm run lint`, `npm run typecheck`, and `npm run build`. Automated tests under `tests/` cover ingestion transactions, document parsing, public URL validation, source filtering, chat limits, conversation history, provider failures, metrics, and feedback. Live provider calls are mocked; the default evaluation uses no API key.
+
+For a browser smoke test, load the fictional Atlas Studio sample, ask the suggested cancellation-policy question, inspect the source excerpt, vote Helpful, and confirm Analytics shows one completed message and one positive vote. Reload Builder to verify browser persistence, remove the source, and export configuration without knowledge. Offline responses must be labeled as extracts, not AI generation. Check a narrow mobile viewport as well.
+
+See [README](../README.md) for live-mode configuration, limits, privacy considerations, and evaluation caveats. The scenario below is a **historical manual test prompt**, not an executed test report or a list of currently implemented UI labels.
 
 ## 🧪 MASTER TEST PROMPT - AI Agent Builder Demo
 
