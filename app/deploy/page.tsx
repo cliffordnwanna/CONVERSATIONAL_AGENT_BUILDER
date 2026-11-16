@@ -1,327 +1,67 @@
-"use client";
+﻿"use client";
 
-import { useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import BackButton from "@/components/BackButton";
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { DEFAULT_CONFIG, getBrowserSession, readBrowserData, readConfig, type AgentConfig, type KnowledgeSource } from "@/lib/browserSession";
 
 export default function DeployPage() {
-  const [copied, setCopied] = useState(false);
-  const [selectedPlan, setSelectedPlan] = useState("starter");
-  const [customDomain, setCustomDomain] = useState("");
-
-  const embedCode = `<script src="https://your-agent.vercel.app/embed.js" data-agent-id="your-agent-id"></script>`;
-  
-  const advancedEmbedCode = `<script>
-  window.AgentForgeConfig = {
-    agentId: "your-agent-id",
-    position: "bottom-right",
-    theme: "dark",
-    welcomeMessage: "Hello! How can I help you today?"
-  };
-</script>
-<script src="https://your-agent.vercel.app/embed.js"></script>`;
-
-  const copyToClipboard = async (text: string) => {
+  const [config, setConfig] = useState<AgentConfig>(DEFAULT_CONFIG);
+  const [knowledge, setKnowledge] = useState<KnowledgeSource[]>([]);
+  const [includeKnowledge, setIncludeKnowledge] = useState(false);
+  const [ready, setReady] = useState(false);
+  const [notice, setNotice] = useState("");
+  const [error, setError] = useState("");
+  useEffect(() => {
+    let active = true;
+    void Promise.resolve().then(() => {
+      if (!active) return;
+      const session = getBrowserSession();
+      setConfig(readConfig(session.id));
+      const saved = readBrowserData<KnowledgeSource[]>(session.id, "knowledge", []);
+      setKnowledge(Array.isArray(saved) ? saved : []);
+      setReady(true);
+      if (!session.persistent) setNotice("Browser storage is unavailable. Only data retained in this open app can be exported.");
+    });
+    return () => { active = false; };
+  }, []);
+  const download = () => {
+    setError(""); setNotice("");
     try {
-      await navigator.clipboard.writeText(text);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      console.error("Failed to copy:", err);
-    }
+      const exported = {
+        schemaVersion: 1,
+        kind: "agentforge-portfolio-demo",
+        exportedAt: new Date().toISOString(),
+        note: "Local configuration snapshot, not a hosted agent or deployment credential. No API key, browser session identifier, or chat history is included.",
+        config,
+        ...(includeKnowledge ? { knowledge: knowledge.map(({ title, content, type, source }) => ({ title, content, type, source })) } : {}),
+      };
+      const url = URL.createObjectURL(new Blob([JSON.stringify(exported, null, 2)], { type: "application/json" }));
+      const link = document.createElement("a"); link.href = url; link.download = "agent-demo-config.json"; document.body.appendChild(link); link.click(); link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      setNotice("Download requested. Keep this file private if it contains proprietary instructions or source material.");
+    } catch { setError("The browser could not create the download. Please retry in a browser that supports file downloads."); }
   };
-
-  const plans = [
-    {
-      id: "starter",
-      name: "Starter",
-      price: "$0",
-      features: ["1 Agent", "1,000 msgs/month", "Basic Analytics", "Community Support"],
-      recommended: true,
-    },
-    {
-      id: "professional", 
-      name: "Professional",
-      price: "$49",
-      features: ["5 Agents", "10,000 msgs/month", "Advanced Analytics", "Priority Support", "Custom Branding"],
-      recommended: false,
-    },
-    {
-      id: "enterprise",
-      name: "Enterprise", 
-      price: "$199",
-      features: ["Unlimited Agents", "Unlimited Messages", "Real-time Analytics", "Dedicated Support", "White Label", "API Access"],
-      recommended: false,
-    },
-  ];
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white">
-      {/* Header */}
-      <div className="border-b border-white/10 backdrop-blur-sm bg-white/5">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-xl font-bold text-white">Deploy Your Agent</h1>
-              <p className="text-sm text-gray-300">Choose deployment option</p>
-            </div>
-            <div className="flex items-center gap-4">
-              <BackButton href="/builder" />
-              <Badge className="text-xs bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white border-0">
-                Ready to Deploy
-              </Badge>
-            </div>
+      <main className="container mx-auto max-w-5xl space-y-6 px-4 py-8">
+        <header className="flex flex-wrap items-center justify-between gap-4"><div><h1 className="text-2xl font-bold">Export your demo</h1><p className="mt-2 text-sm text-slate-300">Take a local snapshot. Nothing is published.</p></div><nav aria-label="Export navigation" className="flex flex-wrap gap-4 text-sm text-blue-200"><Link href="/builder">Playground</Link><Link href="/analytics">Analytics</Link><Link href="/">Home</Link></nav></header>
+        <div className="rounded-xl border border-amber-400/30 bg-amber-500/10 p-4 text-sm text-amber-100">This portfolio demo has no authentication, database, billing, or persistent public agents. There is no production deployment or public embed to activate.</div>
+        <div className="grid items-start gap-6 md:grid-cols-2">
+          <Card className="border-white/10 bg-white/5 text-white"><CardHeader><CardTitle>Agent configuration JSON</CardTitle><CardDescription className="text-slate-300">Export the settings saved by this browser. The file is a portable reference for development; it does not provision an agent.</CardDescription></CardHeader><CardContent className="space-y-4">
+            {!ready ? <p role="status">Loading browser snapshot…</p> : <dl className="space-y-3 text-sm"><div><dt className="text-slate-400">Name</dt><dd className="break-words">{config.name}</dd></div><div><dt className="text-slate-400">Use case / tone</dt><dd>{config.useCase} / {config.tone}</dd></div><div><dt className="text-slate-400">Goal</dt><dd className="whitespace-pre-wrap break-words">{config.goal}</dd></div><div><dt className="text-slate-400">Browser-cached sources</dt><dd>{knowledge.length}</dd></div></dl>}
+            <label className="flex items-start gap-3 rounded-lg border border-slate-600 p-3 text-sm"><input type="checkbox" className="mt-1" checked={includeKnowledge} onChange={event => setIncludeKnowledge(event.target.checked)} disabled={!ready || !knowledge.length} /><span>Include full knowledge content ({knowledge.length} sources). I understand this can expose private or proprietary data.</span></label>
+            <p className="text-xs text-amber-200">Settings alone may contain sensitive instructions. Review the JSON before sharing it. Exported files are not encrypted.</p>
+            <Button className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white" disabled={!ready} onClick={download}>Download {includeKnowledge ? "config + knowledge" : "configuration"} JSON</Button>
+            {notice && <p role="status" className="text-sm text-blue-200">{notice}</p>}{error && <p role="alert" className="text-sm text-red-200">{error}</p>}
+          </CardContent></Card>
+          <div className="space-y-6">
+            <Card className="border-white/10 bg-slate-800/80 text-white"><CardHeader><CardTitle>Widget concept</CardTitle><CardDescription className="text-slate-300">Visual mockup only — not connected to a public agent.</CardDescription></CardHeader><CardContent><div className="overflow-hidden rounded-xl border border-slate-600"><div className="break-words bg-gradient-to-r from-blue-600 to-purple-600 p-4 font-semibold">{config.name}</div><div className="space-y-4 bg-slate-900 p-4"><p className="rounded-lg bg-slate-700 p-3 text-sm">A website assistant could live here. Test the actual demo in the playground instead.</p><Button asChild variant="outline" className="w-full"><Link href="/builder">Open interactive playground</Link></Button></div></div></CardContent></Card>
+            <Card className="border-white/10 bg-white/5 text-white"><CardHeader><CardTitle>Before a real deployment</CardTitle></CardHeader><CardContent><ul className="list-disc space-y-2 pl-5 text-sm text-slate-300"><li>Add authentication and isolate tenant data.</li><li>Persist configuration, knowledge, and conversations in a database.</li><li>Add monitoring, durable quotas, privacy controls, and deletion policies.</li><li>Evaluate answer quality and design a human handoff.</li></ul></CardContent></Card>
           </div>
         </div>
-      </div>
-
-      <div className="container mx-auto px-4 py-6">
-        <div className="grid lg:grid-cols-3 gap-6">
-          {/* Deployment Options */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Quick Deploy */}
-            <Card className="border-white/10 bg-white/5 backdrop-blur-sm">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-white">
-                  Quick Deploy
-                  <Badge variant="secondary" className="text-xs">Recommended</Badge>
-                </CardTitle>
-                <CardDescription className="text-gray-300">
-                  Get your agent live in 2 minutes with our optimized embed
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
-                  <h4 className="font-medium text-blue-100 mb-3">Standard Embed Code</h4>
-                  <div className="relative">
-                    <pre className="bg-slate-900 text-gray-100 p-4 rounded-lg text-sm overflow-x-auto">
-                      <code>{embedCode}</code>
-                    </pre>
-                    <Button
-                      size="sm"
-                      className="absolute top-2 right-2"
-                      onClick={() => copyToClipboard(embedCode)}
-                    >
-                      {copied ? "✓ Copied" : "📋 Copy"}
-                    </Button>
-                  </div>
-                </div>
-                
-                <div className="mt-4 space-y-2">
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 bg-green-500 rounded-full"></div>
-                    <span className="text-sm text-gray-200">Auto-responsive design</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 bg-green-500 rounded-full"></div>
-                    <span className="text-sm text-gray-200">No coding required</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 bg-green-500 rounded-full"></div>
-                    <span className="text-sm text-gray-200">Works on all websites</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Pricing Plans */}
-            <div className="space-y-6">
-              <Card className="border-white/10 bg-white/5 backdrop-blur-sm">
-                <CardHeader>
-                  <CardTitle className="text-white">💰 Pricing Plans</CardTitle>
-                  <CardDescription className="text-gray-300">
-                    Choose the right plan for your needs
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {plans.map((plan) => (
-                    <div
-                      key={plan.id}
-                      onClick={() => setSelectedPlan(plan.id)}
-                      className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
-                        selectedPlan === plan.id
-                          ? "border-blue-500 bg-blue-500/20"
-                          : "border-gray-600 hover:border-gray-500"
-                      } ${plan.recommended ? "ring-2 ring-blue-500 ring-offset-2 ring-offset-slate-900" : ""}`}
-                    >
-                      <div className="flex items-center justify-between mb-3">
-                        <div>
-                          <h3 className="font-semibold text-lg text-white">{plan.name}</h3>
-                          <p className="text-2xl font-bold text-blue-400">{plan.price}</p>
-                          <p className="text-sm text-gray-300">/month</p>
-                        </div>
-                        {plan.recommended && (
-                          <Badge variant="default" className="text-xs">
-                            Most Popular
-                          </Badge>
-                        )}
-                      </div>
-                      
-                      <ul className="space-y-2">
-                        {plan.features.map((feature, idx) => (
-                          <li key={idx} className="flex items-center gap-2 text-sm text-gray-300">
-                            <div className="w-4 h-4 bg-green-500 rounded-full flex-shrink-0"></div>
-                            <span>{feature}</span>
-                          </li>
-                        ))}
-                      </ul>
-                      
-                      <Button 
-                        className="w-full mt-4"
-                        variant={selectedPlan === plan.id ? "default" : "outline"}
-                      >
-                        {selectedPlan === plan.id ? "✓ Current Plan" : "Select Plan"}
-                      </Button>
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-
-              {/* Deployment Stats */}
-              <Card className="border-white/10 bg-white/5 backdrop-blur-sm">
-                <CardHeader>
-                  <CardTitle className="text-white">📈 Deployment Stats</CardTitle>
-                  <CardDescription className="text-gray-300">
-                    Live performance metrics
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="text-center p-4 bg-white/10 rounded-lg">
-                      <div className="text-2xl font-bold text-white">2.3K</div>
-                      <p className="text-sm text-gray-300">Total Deployments</p>
-                    </div>
-                    <div className="text-center p-4 bg-green-500/10 rounded-lg">
-                      <div className="text-2xl font-bold text-green-400">99.9%</div>
-                      <p className="text-sm text-gray-300">Uptime</p>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-3">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-300">Avg Response Time</span>
-                      <span className="font-medium text-white">1.2s</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-300">Success Rate</span>
-                      <span className="font-medium text-green-400">98.5%</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-300">API Calls Today</span>
-                      <span className="font-medium text-white">45.2K</span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Customization */}
-            <Card className="border-white/10 bg-white/5 backdrop-blur-sm">
-              <CardHeader>
-                <CardTitle className="text-white">Customization Options</CardTitle>
-                <CardDescription className="text-gray-300">
-                  Advanced configuration for enterprise deployments
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <Tabs defaultValue="appearance" className="w-full">
-                  <TabsList className="grid w-full grid-cols-3">
-                    <TabsTrigger value="appearance">Appearance</TabsTrigger>
-                    <TabsTrigger value="behavior">Behavior</TabsTrigger>
-                    <TabsTrigger value="advanced">Advanced</TabsTrigger>
-                  </TabsList>
-                  
-                  <TabsContent value="appearance" className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium mb-2 text-gray-300">Widget Theme</label>
-                      <select className="w-full p-3 border border-white/20 rounded-lg bg-white/10 text-white">
-                        <option value="light">Light</option>
-                        <option value="dark">Dark</option>
-                        <option value="auto">Auto (match website)</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium mb-2 text-gray-300">Position</label>
-                      <select className="w-full p-3 border border-white/20 rounded-lg bg-white/10 text-white">
-                        <option value="bottom-right">Bottom Right</option>
-                        <option value="bottom-left">Bottom Left</option>
-                        <option value="top-right">Top Right</option>
-                        <option value="custom">Custom Coordinates</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium mb-2 text-gray-300">Welcome Message</label>
-                      <input
-                        type="text"
-                        placeholder="Hello! How can I help you?"
-                        className="w-full p-3 border border-white/20 rounded-lg bg-white/10 text-white placeholder-gray-400"
-                      />
-                    </div>
-                  </TabsContent>
-                  
-                  <TabsContent value="behavior" className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium mb-2 text-gray-300">Proactive Message</label>
-                      <textarea
-                        placeholder="Wait 10 seconds before showing..."
-                        className="w-full p-3 border border-white/20 rounded-lg h-20 bg-white/10 text-white placeholder-gray-400"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium mb-2 text-gray-300">Business Hours</label>
-                      <input
-                        type="text"
-                        placeholder="9-5, Mon-Fri"
-                        className="w-full p-3 border border-white/20 rounded-lg bg-white/10 text-white placeholder-gray-400"
-                      />
-                    </div>
-                  </TabsContent>
-                  
-                  <TabsContent value="advanced" className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium mb-2 text-gray-300">Custom Domain</label>
-                      <div className="flex gap-2">
-                        <input
-                          type="text"
-                          value={customDomain}
-                          onChange={(e) => setCustomDomain(e.target.value)}
-                          placeholder="your-domain.com"
-                          className="flex-1 p-3 border border-white/20 rounded-lg bg-white/10 text-white placeholder-gray-400"
-                        />
-                        <Button variant="outline">Verify</Button>
-                      </div>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium mb-2 text-gray-300">Webhook URL</label>
-                      <input
-                        type="url"
-                        placeholder="https://your-domain.com/webhook"
-                        className="w-full p-3 border border-white/20 rounded-lg bg-white/10 text-white placeholder-gray-400"
-                      />
-                    </div>
-                    <div className="bg-yellow-500/10 border border-yellow-600/20 rounded-lg p-3">
-                      <p className="text-sm text-yellow-200">
-                        <strong>Advanced Embed:</strong> Use this for custom domains and advanced features
-                      </p>
-                    </div>
-                  </TabsContent>
-                </Tabs>
-              </CardContent>
-            </Card>
-
-            {/* Action Buttons */}
-            <div className="mt-8 flex justify-center gap-4">
-              <Button variant="outline" asChild>
-                <Link href="/">🏠 Back to Home</Link>
-              </Button>
-            </div>
-          </div>
-        </div>
-      </div>
+      </main>
     </div>
   );
 }

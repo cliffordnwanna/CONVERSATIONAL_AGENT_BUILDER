@@ -77,7 +77,7 @@ export default function RootLayout({
         </nav>
 
         {/* Page Content */}
-        <main>{children}</main>
+        {children}
       </body>
     </html>
   );

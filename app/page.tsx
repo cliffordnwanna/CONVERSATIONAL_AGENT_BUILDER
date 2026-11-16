@@ -1,213 +1,44 @@
-"use client";
-
-import Link from "next/link";
+﻿import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import BackButton from "@/components/BackButton";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+
+const features = [
+  { icon: "✦", title: "Configure and test", detail: "Choose FAQ or sales, give your assistant a name, and set its tone and goal. Every chat request includes those settings." },
+  { icon: "▤", title: "Inspect the evidence", detail: "Load a fictional sample, paste text, upload TXT/PDF/DOCX, or import a public page. Inspect matched source excerpts alongside replies." },
+  { icon: "↗", title: "Measure real activity", detail: "See your session’s actual messages, response time, feedback, and model usage. Export your browser-local configuration as JSON." },
+];
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
-      {/* Hero Section */}
-      <section className="container mx-auto px-4 py-12 sm:py-16 lg:py-20">
-        <div className="text-center mb-8 sm:mb-12 lg:mb-16">
-          <Badge className="mb-3 sm:mb-4 bg-blue-500/20 text-blue-300 border-blue-500/30 text-xs sm:text-sm">
-            🚀 New: Knowledge Base Integration
-          </Badge>
-          <h1 className="text-3xl sm:text-4xl lg:text-6xl font-bold text-white mb-4 sm:mb-6 bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent leading-tight">
-            Build AI Agents That
-            <br />
-            Actually Understand Your Business
-          </h1>
-          <p className="text-base sm:text-lg lg:text-xl text-gray-300 mb-6 sm:mb-8 max-w-2xl sm:max-w-3xl mx-auto leading-relaxed px-2">
-            Create intelligent AI agents with your own knowledge base. Upload documents, configure behavior in 4 simple steps, 
-            and deploy anywhere. No coding required.
-          </p>
-          
-          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center px-4">
-            <Link href="/builder">
-              <Button size="lg" className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white px-6 sm:px-8 py-3 text-sm sm:text-base lg:text-lg w-full sm:w-auto">
-                Start Building Free
-              </Button>
-            </Link>
-            <Button variant="outline" size="lg" className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 sm:px-8 py-3 text-sm sm:text-base lg:text-lg w-full sm:w-auto">
-              Watch Demo
-            </Button>
-          </div>
-        </div>
-
-        {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 mb-12 lg:mb-16">
-          <div className="text-center">
-            <div className="text-2xl sm:text-3xl font-bold text-white mb-1 sm:mb-2">10K+</div>
-            <div className="text-gray-400 text-xs sm:text-sm">AI Agents Created</div>
-          </div>
-          <div className="text-center">
-            <div className="text-2xl sm:text-3xl font-bold text-white mb-1 sm:mb-2">80%</div>
-            <div className="text-gray-400 text-xs sm:text-sm">Cost Reduction</div>
-          </div>
-          <div className="text-center">
-            <div className="text-2xl sm:text-3xl font-bold text-white mb-1 sm:mb-2">5M+</div>
-            <div className="text-gray-400 text-xs sm:text-sm">Messages Processed</div>
-          </div>
-          <div className="text-center">
-            <div className="text-2xl sm:text-3xl font-bold text-white mb-1 sm:mb-2">99.9%</div>
-            <div className="text-gray-400 text-xs sm:text-sm">Uptime</div>
-          </div>
-        </div>
-
-        {/* Features Grid */}
-        <div id="features" className="mb-12 lg:mb-16">
-          <h2 className="text-2xl sm:text-3xl font-bold text-white text-center mb-8 sm:mb-12">
-            Everything You Need to Build Powerful AI Agents
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-8">
-            <Card className="bg-white/5 border-white/10 backdrop-blur-sm hover:bg-white/10 transition-all">
-              <CardHeader>
-                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-500/20 rounded-lg flex items-center justify-center mb-3 sm:mb-4">
-                  <span className="text-xl sm:text-2xl">🤖</span>
-                </div>
-                <CardTitle className="text-base sm:text-lg">Intelligent Configuration</CardTitle>
-                <CardDescription className="text-xs sm:text-sm">
-                  4-step setup with use case, tone, goal, and industry selection
-                </CardDescription>
-              </CardHeader>
-            </Card>
-
-            <Card className="bg-white/5 border-white/10 backdrop-blur-sm hover:bg-white/10 transition-all">
-              <CardHeader>
-                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-purple-500/20 rounded-lg flex items-center justify-center mb-3 sm:mb-4">
-                  <span className="text-xl sm:text-2xl">🧠</span>
-                </div>
-                <CardTitle className="text-base sm:text-lg">Knowledge Base</CardTitle>
-                <CardDescription className="text-xs sm:text-sm">
-                  Upload PDFs, TXT, DOCX files to ground AI responses
-                </CardDescription>
-              </CardHeader>
-            </Card>
-
-            <Card className="bg-white/5 border-white/10 backdrop-blur-sm hover:bg-white/10 transition-all">
-              <CardHeader>
-                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-green-500/20 rounded-lg flex items-center justify-center mb-3 sm:mb-4">
-                  <span className="text-xl sm:text-2xl">📊</span>
-                </div>
-                <CardTitle className="text-base sm:text-lg">Real-time Analytics</CardTitle>
-                <CardDescription className="text-xs sm:text-sm">
-                  Track performance, satisfaction, and ROI metrics
-                </CardDescription>
-              </CardHeader>
-            </Card>
-
-            <Card className="bg-white/5 border-white/10 backdrop-blur-sm hover:bg-white/10 transition-all">
-              <CardHeader>
-                <div className="w-12 h-12 bg-pink-500/20 rounded-lg flex items-center justify-center mb-4">
-                  <span className="text-2xl">🛡️</span>
-                </div>
-                <CardTitle className="text-white">Enterprise Security</CardTitle>
-                <CardDescription className="text-gray-400">
-                  SOC 2 compliant, end-to-end encryption, and GDPR ready for enterprise deployment
-                </CardDescription>
-              </CardHeader>
-            </Card>
-
-            <Card className="bg-white/5 border-white/10 backdrop-blur-sm hover:bg-white/10 transition-all">
-              <CardHeader>
-                <div className="w-12 h-12 bg-cyan-500/20 rounded-lg flex items-center justify-center mb-4">
-                  <span className="text-2xl">🎯</span>
-                </div>
-                <CardTitle className="text-white">Smart Templates</CardTitle>
-                <CardDescription className="text-gray-400">
-                  Pre-built templates for customer support, sales, HR, and more specialized use cases
-                </CardDescription>
-              </CardHeader>
-            </Card>
-          </div>
-        </div>
-
-        {/* Templates Section */}
-        <div id="templates" className="mb-12 lg:mb-16">
-          <h2 className="text-2xl sm:text-3xl font-bold text-white text-center mb-8 sm:mb-12">
-            Start with Proven Templates
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-            <Card className="bg-white/5 border-white/10 backdrop-blur-sm hover:bg-white/10 transition-all cursor-pointer group">
-              <CardHeader>
-                <div className="text-2xl sm:text-3xl mb-3">💼</div>
-                <CardTitle className="text-base sm:text-lg">Sales Assistant</CardTitle>
-                <CardDescription className="text-xs sm:text-sm">
-                  Convert leads and boost sales with intelligent product recommendations
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Button className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white text-sm sm:text-base">
-                  Use Template
-                </Button>
-              </CardContent>
-            </Card>
-            <Card className="bg-white/5 border-white/10 backdrop-blur-sm hover:bg-white/10 transition-all cursor-pointer group">
-              <CardHeader>
-                <div className="text-2xl sm:text-3xl mb-3">❓</div>
-                <CardTitle className="text-base sm:text-lg">FAQ Bot</CardTitle>
-                <CardDescription className="text-xs sm:text-sm">
-                  Answer common questions with knowledge-based responses
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Button className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white text-sm sm:text-base">
-                  Use Template
-                </Button>
-              </CardContent>
-            </Card>
-            <Card className="bg-white/5 border-white/10 backdrop-blur-sm hover:bg-white/10 transition-all cursor-pointer group">
-              <CardHeader>
-                <div className="text-2xl sm:text-3xl mb-3">🎓</div>
-                <CardTitle className="text-base sm:text-lg">Support Agent</CardTitle>
-                <CardDescription className="text-xs sm:text-sm">
-                  24/7 customer support with intelligent ticket routing
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Button className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white text-sm sm:text-base">
-                  Use Template
-                </Button>
-              </CardContent>
-            </Card>
-            <Card className="bg-white/5 border-white/10 backdrop-blur-sm hover:bg-white/10 transition-all cursor-pointer group">
-              <CardHeader>
-                <div className="text-2xl sm:text-3xl mb-3">📚</div>
-                <CardTitle className="text-base sm:text-lg">Knowledge Base</CardTitle>
-                <CardDescription className="text-xs sm:text-sm">
-                  Document-based Q&A with smart search capabilities
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Button className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white text-sm sm:text-base">
-                  Use Template
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-
-        {/* CTA Section */}
-        <div className="text-center mb-12 lg:mb-16 px-4">
-          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-4 sm:mb-6">
-            Conversational Agent Builder
-          </h1>
-          <p className="text-base sm:text-lg lg:text-xl text-gray-300 mb-6 sm:mb-8 max-w-2xl sm:max-w-3xl mx-auto">
-            Build AI Agents That Actually Understand Your Business
-          </p>
-          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center">
-            <Button size="lg" className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 sm:px-8 py-3 sm:py-4 text-sm sm:text-base lg:text-lg w-full sm:w-auto">
-              🎬 Watch Demo
-            </Button>
-            <Button variant="outline" size="lg" className="border-white/20 text-gray-200 hover:bg-white/10 px-6 sm:px-8 py-3 sm:py-4 text-sm sm:text-base lg:text-lg w-full sm:w-auto">
-              View Documentation
-            </Button>
-          </div>
-        </div>
-      </section>
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white">
+      <main className="container mx-auto px-4 py-12 sm:py-20">
+        <section className="mx-auto mb-16 max-w-4xl text-center">
+          <Badge className="mb-5 border-blue-400/30 bg-blue-500/20 text-blue-200">Portfolio project · interactive demo</Badge>
+          <h1 className="mb-6 bg-gradient-to-r from-blue-300 to-purple-300 bg-clip-text text-4xl font-bold leading-tight text-transparent sm:text-6xl">Build a small assistant.<br />See what it knows.</h1>
+          <p className="mx-auto mb-8 max-w-2xl text-base leading-relaxed text-slate-300 sm:text-xl">Explore a knowledge-grounded agent workflow, from configuration to source inspection. Start with fictional sample data — no account or credentials needed in offline demo mode.</p>
+          <div className="flex flex-col justify-center gap-3 sm:flex-row"><Button asChild size="lg" className="bg-gradient-to-r from-blue-600 to-purple-600 text-white"><Link href="/builder">Try the playground</Link></Button><Button asChild size="lg" variant="outline" className="border-white/20"><Link href="#how-it-works">See how it works</Link></Button></div>
+          <p className="mt-5 text-xs text-slate-400">6 messages per 10-minute in-memory session. This is a demo, not a hosted production agent service.</p>
+        </section>
+        <section id="features" className="mb-16 grid gap-5 md:grid-cols-3" aria-label="Demo features">
+          {features.map(feature => <Card key={feature.title} className="border-white/10 bg-white/5 text-white backdrop-blur-sm transition-colors hover:bg-white/10"><CardHeader><span aria-hidden="true" className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-blue-500/20 text-2xl text-blue-200">{feature.icon}</span><CardTitle>{feature.title}</CardTitle><CardDescription className="leading-relaxed text-slate-300">{feature.detail}</CardDescription></CardHeader></Card>)}
+        </section>
+        <section id="how-it-works" className="mb-16 rounded-2xl border border-white/10 bg-slate-900/50 p-6 sm:p-10">
+          <h2 className="mb-6 text-2xl font-bold">A three-minute walkthrough</h2>
+          <ol className="grid list-inside list-decimal gap-6 text-blue-200 md:grid-cols-3"><li><span className="font-semibold text-white">Load the sample</span><p className="mt-2 text-sm leading-relaxed text-slate-300">Open the playground and add the fictional Atlas Studio knowledge. Read its short policy before asking a question.</p></li><li><span className="font-semibold text-white">Ask and inspect</span><p className="mt-2 text-sm leading-relaxed text-slate-300">Ask “What is the cancellation policy?” Expand the matched sources and mark whether the response was helpful.</p></li><li><span className="font-semibold text-white">Check your session</span><p className="mt-2 text-sm leading-relaxed text-slate-300">Visit analytics to see the request and your feedback. Download your configuration if you want a local record.</p></li></ol>
+        </section>
+        <section id="templates" className="mb-16">
+          <h2 className="mb-6 text-center text-2xl font-bold">Choose a starting point</h2>
+          <div className="mx-auto grid max-w-3xl gap-5 sm:grid-cols-2">{[{ id: "faq", title: "FAQ & support", description: "Explore policies, opening hours, and answers grounded in your documents." }, { id: "sales", title: "Sales assistant", description: "Explore product information with a sales-oriented prompt in live AI mode." }].map(template => <Card key={template.id} className="border-white/10 bg-white/5 text-white"><CardHeader><CardTitle>{template.title}</CardTitle><CardDescription className="text-slate-300">{template.description}</CardDescription></CardHeader><CardContent><Button asChild className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white"><Link href={`/builder?template=${template.id}`}>Start {template.title.toLowerCase()}</Link></Button></CardContent></Card>)}</div>
+        </section>
+        <section className="mx-auto max-w-3xl space-y-4 rounded-2xl border border-amber-400/20 bg-amber-500/5 p-6">
+          <h2 className="text-xl font-semibold">What this demo does — and doesn’t do</h2>
+          <p className="text-sm leading-relaxed text-slate-300"><strong className="text-white">Offline demo:</strong> local keyword matching returns source excerpts. It does not generate AI answers or provide semantic understanding. The builder clearly shows which runtime mode is active.</p>
+          <p className="text-sm leading-relaxed text-slate-300"><strong className="text-white">Live mode:</strong> when the operator configures an API key, embeddings and language-model responses use an external provider and may incur costs. Answers still need verification.</p>
+          <p className="text-sm leading-relaxed text-slate-300">Server knowledge and metrics are temporary. Settings, source copies, and recent chat stay in your browser. Avoid sensitive data. There is no authentication, permanent hosting, public agent deployment, billing, or claimed compliance certification.</p>
+          <div className="flex flex-wrap gap-4 pt-2 text-sm text-blue-200"><Link href="/builder">Open playground →</Link><Link href="/analytics">View session analytics →</Link><Link href="/deploy">Export configuration →</Link></div>
+        </section>
+      </main>
     </div>
   );
 }

@@ -1,786 +1,200 @@
-"use client";
+﻿"use client";
 
-import { useState, useEffect, useMemo, useRef } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
 import AgentConfigurator from "@/components/AgentConfigurator";
-import BackButton from "@/components/BackButton";
-import { Upload, Globe, FileText, FolderOpen } from "lucide-react";
+import KnowledgeBaseWorkflow from "@/components/KnowledgeBaseWorkflow";
+import { DEFAULT_CONFIG, fetchJson, getBrowserSession, readBrowserData, readConfig, writeBrowserData, type AgentConfig, type ChatMessage, type HealthStatus, type KnowledgeSource, type SessionAnalytics, type SourceChunk } from "@/lib/browserSession";
 
-// Unified knowledge interface - SINGLE SOURCE OF TRUTH
-interface UnifiedKnowledge {
-  id: string;
-  type: "file" | "url" | "text";
-  title: string;
-  content: string;
-  status: "pending" | "completed" | "error";
-  source?: string; // URL or filename
-  metadata?: {
-    wordCount?: number;
-    description?: string;
-    lastScraped?: string;
-    chunksCreated?: number;
-  };
-  addedAt: number;
-}
-
-interface Message {
-  role: "user" | "assistant";
-  content: string;
-  timestamp: string;
-  usedKnowledge?: boolean;
-  sources?: string[];
-  chunkPreviews?: { source: string; preview: string }[];
-}
-
-interface Analytics {
-  conversations: number;
-  thumbsUp: number;
-  thumbsDown: number;
-}
-
-interface AgentConfig {
-  useCase: string;
-  tone: string;
-  goal: string;
-  industry?: string;
+interface ChatResponse {
+  reply: string;
+  messageId: string;
+  remainingMessages: number;
+  usedKnowledge: boolean;
+  chunks: SourceChunk[];
+  analytics: SessionAnalytics;
+  mode: "demo" | "live";
+  retrievalMode: "semantic" | "lexical" | "inline" | "none";
 }
 
 export default function BuilderClient({ template = "" }: { template?: string }) {
-  const [sessionId, setSessionId] = useState<string>("");
-  const [messages, setMessages] = useState<Message[]>([]);
+  const search = useSearchParams();
+  const selectedTemplate = template || search.get("template") || "";
+  const [sessionId, setSessionId] = useState("");
+  const [config, setConfig] = useState<AgentConfig>(DEFAULT_CONFIG);
+  const [knowledge, setKnowledge] = useState<KnowledgeSource[]>([]);
+  const [knowledgeReady, setKnowledgeReady] = useState(false);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const [analytics, setAnalytics] = useState<Analytics>({
-    conversations: 0,
-    thumbsUp: 0,
-    thumbsDown: 0,
-  });
-  
-  // UNIFIED KNOWLEDGE STATE - SINGLE SOURCE OF TRUTH
-  const [knowledge, setKnowledge] = useState<UnifiedKnowledge[]>([]);
-  
-  const [agentConfig, setAgentConfig] = useState<AgentConfig>({
-    useCase: template || "",
-    tone: "professional",
-    goal: "",
-    industry: "",
-  });
-  const [isConfigured, setIsConfigured] = useState(false);
-
-  // Knowledge Base Step 4 states
-  const [knowledgeTab, setKnowledgeTab] = useState("website");
-  const [websiteUrl, setWebsiteUrl] = useState("");
-  const [textContent, setTextContent] = useState("");
-  const [isProcessing, setIsProcessing] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [feedbackBusy, setFeedbackBusy] = useState("");
+  const [error, setError] = useState("");
+  const [storageWarning, setStorageWarning] = useState("");
+  const [health, setHealth] = useState<HealthStatus | null>(null);
+  const [healthError, setHealthError] = useState("");
+  const [analytics, setAnalytics] = useState<SessionAnalytics | null>(null);
+  const [analyticsError, setAnalyticsError] = useState("");
+  const [reload, setReload] = useState(0);
+  const endRef = useRef<HTMLDivElement>(null);
+  const sendLock = useRef(false);
+  const feedbackLock = useRef(false);
+  const chatController = useRef<AbortController | null>(null);
 
   useEffect(() => {
-    const id = crypto.randomUUID();
-    setSessionId(id);
-  }, []);
-
-  // Auto-scroll to bottom when messages change (optimized for Windows)
-  useEffect(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ 
-        behavior: 'smooth',
-        block: 'end'
-      });
-    }
-  }, [messages]);
-
-  const sendMessage = async () => {
-    if (!input.trim() || messages.filter(m => m.role === 'user').length >= 6) return;
-
-    // Normalize input for better embedding similarity
-    const normalizedInput = input
-      .replace(/["""]/g, '"')
-      .replace(/[']/g, "'")
-      .trim();
-
-    setIsLoading(true);
-    
-    // Track activity for analytics
-    if (typeof localStorage !== 'undefined') {
-      localStorage.setItem('lastActivity', Date.now().toString());
-    }
-    
-    try {
-      // Send knowledge IDs to ensure RAG can find them
-      const knowledgeIds = knowledge.map(k => k.id);
-      
-      console.log("📤 Sending Chat Request:", {
-        sessionId,
-        message: normalizedInput,
-        knowledgeCount: knowledge.length,
-        knowledgeIds,
-        knowledgeDetails: knowledge.map(k => ({
-          id: k.id,
-          title: k.title,
-          type: k.type,
-          wordCount: k.metadata?.wordCount,
-        })),
-      });
-      
-      const response = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          sessionId,
-          message: normalizedInput,
-          type: agentConfig.useCase || "support",
-          knowledgeIds,
-          hasKnowledge: knowledge.length > 0,
-          // Send knowledge content directly so RAG works on serverless (Vercel)
-          knowledgeContent: knowledge.map(k => ({
-            title: k.title,
-            content: k.content.substring(0, 8000),
-            type: k.type,
-            source: k.source || k.title,
-          })),
-        }),
-      });
-
-      const data = await response.json();
-      
-      // Debug logging
-      console.log("🔍 Chat Response Debug:", {
-        sessionId,
-        knowledgeCount: knowledge.length,
-        knowledgeIds: knowledge.map(k => k.id),
-        usedKnowledge: data.usedKnowledge,
-        chunks: data.chunks,
-      });
-      
-      const userMessage: Message = {
-        role: "user",
-        content: input,
-        timestamp: new Date().toISOString(),
-      };
-      
-      const assistantMessage: Message = {
-        role: "assistant",
-        content: data.reply || data.error || "Sorry, something went wrong. Please try again.",
-        timestamp: new Date().toISOString(),
-        usedKnowledge: data.analytics?.usedKnowledge || false,
-        sources: data.sources || [],
-        chunkPreviews: data.chunkPreviews || [],
-      };
-      
-      setMessages(prev => [...prev, userMessage, assistantMessage]);
-      if (data.analytics) {
-        setAnalytics(prev => ({ ...prev, ...data.analytics }));
-      }
-      setInput("");
-    } catch (error) {
-      console.error("Error sending message:", error);
-      const errorMessage: Message = {
-        role: "assistant",
-        content: "Sorry, something went wrong. Please try again.",
-        timestamp: new Date().toISOString(),
-      };
-      setMessages(prev => [...prev, { role: "user", content: input, timestamp: new Date().toISOString() }, errorMessage]);
-      setInput("");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleFeedback = (type: "up" | "down") => {
-    if (type === "up") {
-      setAnalytics(prev => ({ ...prev, thumbsUp: prev.thumbsUp + 1 }));
-    } else {
-      setAnalytics(prev => ({ ...prev, thumbsDown: prev.thumbsDown + 1 }));
-    }
-  };
-
-  const formatTime = (timestamp: string) => {
-    return new Date(timestamp).toLocaleTimeString([], { 
-      hour: '2-digit', 
-      minute: '2-digit' 
+    let active = true;
+    void Promise.resolve().then(() => {
+      if (!active) return;
+      const session = getBrowserSession();
+      const savedConfig = readConfig(session.id, selectedTemplate);
+      let savedMessages = readBrowserData<ChatMessage[]>(session.id, "messages", []);
+      if (!Array.isArray(savedMessages)) savedMessages = [];
+      savedMessages = savedMessages.filter(message => ["user", "assistant"].includes(message?.role) && typeof message.content === "string").slice(-12);
+      setSessionId(session.id); setConfig(savedConfig); setMessages(savedMessages);
+      if (!session.persistent || !writeBrowserData(session.id, "config", savedConfig)) setStorageWarning("Browser storage is unavailable. This session and its settings may be lost when you leave or reload.");
     });
-  };
+    return () => { active = false; chatController.current?.abort(); };
+  }, [selectedTemplate]);
 
-  const handleCompleteConfiguration = () => {
-    // Mark as configured if agent config is complete AND there's at least one knowledge source
-    if (agentConfig.useCase && agentConfig.tone && agentConfig.goal && knowledge.length > 0) {
-      setIsConfigured(true);
-    }
-  };
-
-  const handleResetConfiguration = () => {
-    setIsConfigured(false);
-  };
-
-  // Handle website scraping
-  const handleScrapeWebsite = async () => {
-    if (!websiteUrl.trim()) return;
-    
-    setIsProcessing(true);
+  const refreshAnalytics = useCallback(async (signal?: AbortSignal) => {
+    if (!sessionId) return;
     try {
-      const response = await fetch("/api/knowledge", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          url: websiteUrl,
-          sessionId,
+      const data = await fetchJson<SessionAnalytics>(`/api/analytics?sessionId=${encodeURIComponent(sessionId)}`, { signal });
+      if (!signal?.aborted) { setAnalytics(data); setAnalyticsError(""); }
+    } catch (err) { if (!signal?.aborted) setAnalyticsError(err instanceof Error ? err.message : "Session metrics are unavailable."); }
+  }, [sessionId]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    fetchJson<HealthStatus>("/api/health", { signal: controller.signal }).then(data => {
+      if (!controller.signal.aborted) { setHealth(data); setHealthError(""); }
+    }).catch(err => { if (!controller.signal.aborted) setHealthError(err instanceof Error ? err.message : "Could not check demo status."); });
+    void Promise.resolve().then(() => { if (!controller.signal.aborted) void refreshAnalytics(controller.signal); });
+    const refresh = () => { void refreshAnalytics(controller.signal); };
+    window.addEventListener("focus", refresh);
+    return () => { controller.abort(); window.removeEventListener("focus", refresh); };
+  }, [refreshAnalytics, reload]);
+
+  useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" }); }, [messages, busy]);
+
+  const persistMessages = (next: ChatMessage[]) => {
+    setMessages(next);
+    if (!writeBrowserData(sessionId, "messages", next)) setStorageWarning("Browser storage is full or unavailable. New conversation changes cannot be saved across reloads.");
+  };
+  const updateConfig = (next: AgentConfig) => {
+    setConfig(next);
+    if (!writeBrowserData(sessionId, "config", next)) setStorageWarning("Browser storage is full or unavailable. Configuration changes cannot be saved across reloads.");
+  };
+  const remaining = analytics?.remainingMessages;
+  const canSend = Boolean(sessionId && health && knowledgeReady && config.name.trim() && config.goal.trim() && input.trim() && !busy && !feedbackBusy && remaining !== 0);
+  const sendMessage = async () => {
+    if (!canSend || sendLock.current) return;
+    sendLock.current = true; setBusy(true); setError("");
+    const controller = new AbortController(); chatController.current = controller;
+    const text = input.trim();
+    try {
+      const data = await fetchJson<ChatResponse>("/api/chat", {
+        method: "POST", signal: controller.signal, headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionId, message: text, type: config.useCase,
+          config: { name: config.name.trim(), tone: config.tone, goal: config.goal.trim(), industry: config.industry.trim() },
+          knowledgeIds: knowledge.map(source => source.id),
+          knowledgeContent: knowledge.map(source => ({ id: source.id, title: source.title.slice(0, 200), content: source.content, source: (source.source || source.title).slice(0, 2048) })),
+          history: messages.slice(-12).map(({ role, content }) => ({ role, content: content.slice(0, 4000) })),
         }),
       });
-      
-      const data = await response.json();
-      
-      console.log("🌐 Website Scrape Success:", {
-        url: websiteUrl,
-        knowledgeId: data.id,
-        sessionId,
-      });
-      
-      const newKnowledge: UnifiedKnowledge = {
-        id: data.id || crypto.randomUUID(),
-        type: "url",
-        title: data.title || websiteUrl,
-        content: data.content,
-        status: "completed",
-        source: websiteUrl,
-        metadata: {
-          wordCount: data.metadata?.wordCount || 0,
-          lastScraped: new Date().toISOString(),
-        },
-        addedAt: Date.now(),
-      };
-      
-      setKnowledge(prev => [...prev, newKnowledge]);
-      setWebsiteUrl("");
-    } catch (error) {
-      console.error("Error scraping website:", error);
-      alert("Failed to scrape website. Please check the URL and try again.");
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  // Handle file upload
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-    
-    setIsProcessing(true);
-    
-    for (const file of Array.from(files)) {
-      try {
-        const formData = new FormData();
-        formData.append('files', file);
-        formData.append('sessionId', sessionId);
-        
-        // Upload to API
-        const response = await fetch('/api/knowledge', {
-          method: 'POST',
-          body: formData,
-        });
-        
-        if (!response.ok) {
-          throw new Error(`Upload failed: ${response.statusText}`);
-        }
-        
-        const data = await response.json();
-        
-        console.log("📁 File Upload Success:", {
-          filename: file.name,
-          knowledgeId: data.id,
-          wordCount: data.metadata?.wordCount,
-          chunksCreated: data.metadata?.chunksCreated || 0,
-          sessionId,
-        });
-        
-        const newKnowledge: UnifiedKnowledge = {
-          id: data.id || crypto.randomUUID(),
-          type: "file",
-          title: file.name,
-          content: data.content || "",
-          status: "completed",
-          source: file.name,
-          metadata: {
-            wordCount: data.metadata?.wordCount || 0,
-            chunksCreated: data.chunks?.length || 0,
-          },
-          addedAt: Date.now(),
-        };
-        
-        // Update state immediately and force re-render
-        setKnowledge(prev => {
-          const updated = [...prev, newKnowledge];
-          console.log("📊 Knowledge State Updated:", {
-            count: updated.length,
-            ids: updated.map(k => k.id),
-          });
-          return updated;
-        });
-      } catch (error) {
-        console.error("❌ Error processing file:", error);
-        alert(`Failed to upload ${file.name}. Please try again.`);
+      if (typeof data.reply !== "string" || !data.messageId) throw new Error("The server returned an incomplete reply. Please retry.");
+      persistMessages([...messages, { role: "user", content: text }, {
+        role: "assistant", content: data.reply, messageId: data.messageId,
+        chunks: data.chunks ?? [], usedKnowledge: data.usedKnowledge,
+        retrievalMode: data.retrievalMode, mode: data.mode, feedback: null,
+      }].slice(-12) as ChatMessage[]);
+      setAnalytics({ ...data.analytics, remainingMessages: data.remainingMessages });
+      setInput("");
+    } catch (err) {
+      if (!controller.signal.aborted) {
+        setError(err instanceof Error ? err.message : "The message could not be sent. Your text is still here to retry.");
+        void refreshAnalytics();
       }
-    }
-    
-    setIsProcessing(false);
-    e.target.value = "";
+    } finally { sendLock.current = false; setBusy(false); }
   };
-
-  // Handle text paste
-  const handleAddText = async () => {
-    if (!textContent.trim()) return;
-    
-    setIsProcessing(true);
+  const feedback = async (message: ChatMessage, value: "up" | "down") => {
+    if (!message.messageId || feedbackLock.current) return;
+    feedbackLock.current = true; setFeedbackBusy(message.messageId); setError("");
+    const nextValue = message.feedback === value ? null : value;
     try {
-      const response = await fetch("/api/knowledge", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          text: textContent,
-          sessionId,
-        }),
-      });
-      
-      const data = await response.json();
-      
-      console.log("📝 Text Add Success:", {
-        knowledgeId: data.id,
-        sessionId,
-      });
-      
-      const newKnowledge: UnifiedKnowledge = {
-        id: data.id || crypto.randomUUID(),
-        type: "text",
-        title: data.title || `Text Entry ${knowledge.filter(k => k.type === "text").length + 1}`,
-        content: textContent,
-        status: "completed",
-        metadata: {
-          wordCount: data.metadata?.wordCount || textContent.split(/\s+/).length,
-        },
-        addedAt: Date.now(),
-      };
-      
-      setKnowledge(prev => [...prev, newKnowledge]);
-      setTextContent("");
-    } catch (error) {
-      console.error("Error adding text:", error);
-      alert("Failed to add text content. Please try again.");
-    } finally {
-      setIsProcessing(false);
-    }
+      const data = await fetchJson<{ analytics: SessionAnalytics }>("/api/feedback", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ sessionId, messageId: message.messageId, value: nextValue }) });
+      setAnalytics(data.analytics);
+      persistMessages(messages.map(item => item.messageId === message.messageId ? { ...item, feedback: nextValue } : item));
+    } catch (err) { setError(err instanceof Error ? err.message : "Feedback could not be saved. Please retry."); }
+    finally { feedbackLock.current = false; setFeedbackBusy(""); }
   };
-
-  // Handle delete knowledge
-  const handleDeleteKnowledge = (id: string) => {
-    setKnowledge(prev => prev.filter(k => k.id !== id));
-  };
-
-  // Memoized configuration completion check
-  const isConfigurationComplete = useMemo(() => {
-    return Boolean(
-      agentConfig.useCase &&
-      agentConfig.tone &&
-      agentConfig.goal &&
-      knowledge.length > 0
-    );
-  }, [agentConfig, knowledge]);
-
-  // Knowledge Base Step 4 Component
-  const renderKnowledgeBaseStep = () => (
-    <div className="space-y-4">
-      <div>
-        <h3 className="text-sm font-semibold text-white mb-2">
-          🧠 Knowledge Base Workflow
-        </h3>
-        <p className="text-xs text-gray-300 mb-4">
-          <Badge variant="secondary" className="mr-2">{knowledge.length} Sources</Badge>
-          Add knowledge from websites, plain text, or documents. AI agents will use this information for accurate responses.
-        </p>
-      </div>
-
-      <Tabs value={knowledgeTab} onValueChange={setKnowledgeTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="website" className="text-xs">
-            <Globe className="w-3 h-3 mr-1" />
-            Website
-          </TabsTrigger>
-          <TabsTrigger value="upload" className="text-xs">
-            <Upload className="w-3 h-3 mr-1" />
-            Upload
-          </TabsTrigger>
-          <TabsTrigger value="text" className="text-xs">
-            <FileText className="w-3 h-3 mr-1" />
-            Text
-          </TabsTrigger>
-          <TabsTrigger value="manage" className="text-xs">
-            <FolderOpen className="w-3 h-3 mr-1" />
-            Manage
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="website" className="space-y-3 mt-4">
-          <div>
-            <label className="text-xs font-medium text-gray-300 mb-1 block">
-              Website URL
-            </label>
-            <Input
-              type="url"
-              placeholder="https://example.com or https://docs.example.com"
-              value={websiteUrl}
-              onChange={(e) => setWebsiteUrl(e.target.value)}
-              className="text-sm"
-            />
-          </div>
-          <Button 
-            onClick={handleScrapeWebsite}
-            disabled={!websiteUrl.trim() || isProcessing}
-            className="w-full"
-            size="sm"
-          >
-            {isProcessing ? "🕷️ Scraping..." : "🕷️ Scrape Website"}
-          </Button>
-          <p className="text-xs text-gray-400">
-            Extracts main content from website. Supports documentation sites, blogs, and company pages.
-          </p>
-        </TabsContent>
-
-        <TabsContent value="upload" className="space-y-3 mt-4">
-          <div className="border-2 border-dashed border-slate-500 rounded-lg p-6 text-center hover:border-blue-400 transition-colors">
-            <input
-              type="file"
-              id="file-upload"
-              className="hidden"
-              multiple
-              accept=".txt,.pdf,.docx,.md"
-              onChange={handleFileUpload}
-              disabled={isProcessing}
-            />
-            <label 
-              htmlFor="file-upload" 
-              className="cursor-pointer block"
-            >
-              <Upload className="w-8 h-8 mx-auto mb-2 text-gray-400" />
-              <p className="text-sm font-medium text-gray-200 mb-1">
-                📁 Click to upload or drag and drop
-              </p>
-              <p className="text-xs text-gray-400">
-                PDF, TXT, DOCX, MD (Max 3MB per file)
-              </p>
-            </label>
-          </div>
-          <p className="text-xs text-gray-400">
-            Max 5 files • 10MB total
-          </p>
-        </TabsContent>
-
-        <TabsContent value="text" className="space-y-3 mt-4">
-          <div>
-            <label className="text-xs font-medium text-gray-300 mb-1 block">
-              Paste your text content
-            </label>
-            <Textarea
-              placeholder="Paste documentation, policies, product info, or any text content here..."
-              value={textContent}
-              onChange={(e) => setTextContent(e.target.value)}
-              className="min-h-[120px] text-sm"
-            />
-          </div>
-          <Button 
-            onClick={handleAddText}
-            disabled={!textContent.trim()}
-            className="w-full"
-            size="sm"
-          >
-            Add to Knowledge Base
-          </Button>
-        </TabsContent>
-
-        <TabsContent value="manage" className="space-y-3 mt-4">
-          {knowledge.length === 0 ? (
-            <div className="text-center py-8 text-gray-400">
-              <FolderOpen className="w-12 h-12 mx-auto mb-2 text-gray-500" />
-              <p className="text-sm">No knowledge sources yet</p>
-              <p className="text-xs text-gray-500">Add sources from the other tabs</p>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              <div className="flex items-center justify-between mb-3">
-                <p className="text-xs font-semibold text-gray-200">
-                  {knowledge.length} {knowledge.length === 1 ? 'Source' : 'Sources'} Added
-                </p>
-                <Badge variant="default" className="text-xs">
-                  ✅ Ready for RAG
-                </Badge>
-              </div>
-              <div className="space-y-2 max-h-[300px] overflow-y-auto">
-                {knowledge.map((item) => (
-                  <div 
-                    key={item.id}
-                    className="flex items-start justify-between p-3 bg-slate-700/50 rounded-lg border border-slate-600"
-                  >
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        {item.type === "url" && <Globe className="w-3 h-3 text-blue-400" />}
-                        {item.type === "file" && <Upload className="w-3 h-3 text-green-400" />}
-                        {item.type === "text" && <FileText className="w-3 h-3 text-purple-400" />}
-                        <p className="text-xs font-medium text-white truncate">
-                          {item.title}
-                        </p>
-                      </div>
-                      {item.source && (
-                        <p className="text-xs text-gray-400 truncate">{item.source}</p>
-                      )}
-                      <div className="flex items-center gap-3 mt-1">
-                        {item.metadata?.wordCount && (
-                          <p className="text-xs text-gray-400">
-                            📄 {item.metadata.wordCount} words
-                          </p>
-                        )}
-                        {item.metadata?.chunksCreated && (
-                          <p className="text-xs text-green-400">
-                            ✅ {item.metadata.chunksCreated} chunks
-                          </p>
-                        )}
-                        <p className="text-xs text-blue-400">
-                          🆔 {item.id.substring(0, 8)}
-                        </p>
-                      </div>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleDeleteKnowledge(item.id)}
-                      className="ml-2 h-6 w-6 p-0 text-red-400 hover:text-red-300 hover:bg-red-500/20"
-                    >
-                      ×
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </TabsContent>
-      </Tabs>
-    </div>
-  );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
-      {/* Header */}
-      <div className="border-b border-white/10 backdrop-blur-sm bg-white/5">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div>
-                <p className="text-sm text-gray-300">Session: {sessionId.substring(0, 8)}...</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-4">
-              <BackButton href="/" />
-              <Badge variant={knowledge.length > 0 ? "default" : "secondary"}>
-                🧠 {knowledge.length} Sources
-              </Badge>
-              <Badge variant={agentConfig.useCase ? "default" : "secondary"}>
-                ⚡ {agentConfig.useCase ? "Configured" : "Setup Required"}
-              </Badge>
-            </div>
-          </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white">
+      <header className="border-b border-white/10 bg-white/5">
+        <div className="container mx-auto flex flex-wrap items-center justify-between gap-4 px-4 py-5">
+          <div><h1 className="text-xl font-bold">Agent playground</h1><p className="text-xs text-slate-300">Browser session {sessionId ? sessionId.slice(0, 8) : "loading…"}</p></div>
+          <nav aria-label="Playground navigation" className="flex flex-wrap gap-4 text-sm text-blue-200"><Link href="/">Home</Link><Link href="/analytics">Session analytics</Link><Link href="/deploy">Export</Link></nav>
         </div>
-      </div>
-
-      <div className="container mx-auto px-4 py-6">
-        <div className="grid lg:grid-cols-3 gap-6 lg:items-stretch">
-          {/* Left Panel - Configuration ONLY */}
-          <div className="lg:col-span-1 space-y-6">
-            {/* Agent Configuration with Knowledge Base as Step 4 */}
-            <AgentConfigurator 
-              onConfigUpdate={setAgentConfig}
-              initialTemplate={template}
-              onComplete={handleCompleteConfiguration}
-              knowledgeFilesCount={knowledge.length}
-              sessionId={sessionId}
-              onKnowledgeUpdate={setKnowledge}
-              renderKnowledgeBaseStep={renderKnowledgeBaseStep}
-            />
-
-            {/* Quick Stats */}
-            <Card className="border-white/10 bg-white/5 backdrop-blur-sm">
-              <CardHeader>
-                <CardTitle className="text-lg text-white">Session Stats</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-300">Messages</span>
-                    <span className="font-semibold text-white">{messages.filter(m => m.role === 'user').length}/6</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-300">👍 Satisfaction</span>
-                    <span className="font-semibold text-green-400">{analytics.thumbsUp}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-300">Knowledge Used</span>
-                    <span className="font-semibold text-blue-400">
-                      {messages.filter(m => m.usedKnowledge).length}
-                    </span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Center Panel - Chat */}
-          <div className="lg:col-span-2 flex flex-col">
-            <Card className="flex-1 flex flex-col border-white/10 bg-slate-800/80 backdrop-blur-sm min-h-[600px]">
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center gap-2 text-white">
-                    💬 Chat Preview
-                    {agentConfig.useCase && (
-                      <Badge variant="outline">
-                        {agentConfig.useCase}
-                      </Badge>
-                    )}
-                  </CardTitle>
-                  <div className="flex items-center gap-2">
-                    {knowledge.length > 0 && (
-                      <Badge variant="secondary" className="text-xs">
-                        🧠 Knowledge Base Active
-                      </Badge>
-                    )}
-                    <Badge variant="outline" className="text-xs">
-                      6 Message Limit
-                    </Badge>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="flex-1 flex flex-col p-0 overflow-y-auto">
-                {/* Messages Area */}
-                <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-900/50">
-                  {messages.length === 0 ? (
-                    <div className="text-center py-12">
-                      <div className="text-6xl mb-4">🤖</div>
-                      <h3 className="text-xl font-semibold text-gray-300 mb-2">
-                        Ready to test your AI agent!
-                      </h3>
-                      <p className="text-gray-400 max-w-md mx-auto">
-                        Configure your agent and upload knowledge base, then start a conversation to see how it responds.
-                      </p>
-                    </div>
-                  ) : (
-                    messages.map((message, idx) => (
-                      <div
-                        key={idx}
-                        className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
-                      >
-                        <div className={`max-w-[85%] sm:max-w-[80%] rounded-2xl px-4 py-3 ${
-                          message.role === "user"
-                            ? "bg-gradient-to-r from-purple-600 to-blue-600 text-white"
-                            : "bg-slate-700 text-gray-100 border border-slate-600"
-                        }`}>
-                          {message.usedKnowledge && (
-                            <div className="flex items-center gap-2 mb-2 text-xs">
-                              <Badge variant="secondary" className="text-xs">
-                                🧠 Used Knowledge Base
-                              </Badge>
-                            </div>
-                          )}
-
-                          <p className="text-sm leading-relaxed">{message.content}</p>
-
-                          {message.chunkPreviews && message.chunkPreviews.length > 0 && (
-                            <div className="mt-3 pt-2 border-t border-white/10 space-y-1">
-                              <p className="text-xs font-medium text-gray-400">📚 Sources used:</p>
-                              {message.chunkPreviews.map((chunk, i) => (
-                                <div key={i} className="text-xs text-gray-400 bg-white/5 rounded px-2 py-1">
-                                  <span className="font-medium text-gray-300">{chunk.source}:</span>{" "}
-                                  {chunk.preview}
-                                </div>
-                              ))}
-                            </div>
-                          )}
-
-                          {message.role === "assistant" && message.sources && message.sources.length > 0 && (
-                            <div className="mt-2 text-xs text-gray-400">
-                              <span className="font-medium">Source:</span>{" "}
-                              {message.sources.join(", ")}
-                            </div>
-                          )}
-
-                          <p className="text-xs opacity-60 mt-2">
-                            {formatTime(message.timestamp)}
-                          </p>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-
-                {/* Input Area */}
-                <div className="border-t border-slate-700 p-4 bg-slate-800">
-                  <div className="flex gap-3">
-                    <Textarea
-                      value={input}
-                      onChange={(e) => setInput(e.target.value)}
-                      placeholder="Type your message to test the agent..."
-                      className="flex-1 min-h-[60px] resize-none"
-                      disabled={isLoading || messages.filter(m => m.role === 'user').length >= 6}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' && !e.shiftKey) {
-                          e.preventDefault();
-                          sendMessage();
-                        }
-                      }}
-                    />
-                    <Button 
-                      onClick={sendMessage} 
-                      disabled={!input.trim() || isLoading || messages.filter(m => m.role === 'user').length >= 6}
-                      className="self-end flex items-center justify-center gap-2 px-6"
-                    >
-                      {isLoading ? (
-                        <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Thinking...</>
-                      ) : "Send"}
-                    </Button>
-                  </div>
-                  
-                  <div className="flex justify-between items-center mt-2">
-                    <span className="text-xs text-gray-400">
-                      {messages.filter(m => m.role === 'user').length >= 6 
-                        ? "Session limit reached (6 messages)"
-                        : `${messages.filter(m => m.role === 'user').length}/6 messages used`
-                      }
-                    </span>
-                    
-                    {messages.filter(m => m.role === 'user').length > 0 && (
-                      <div className="flex gap-2">
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          onClick={() => handleFeedback("up")}
-                        >
-                          👍
-                        </Button>
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          onClick={() => handleFeedback("down")}
-                        >
-                          👎
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+      </header>
+      <main className="container mx-auto space-y-5 px-4 py-6">
+        <div className="space-y-2 rounded-xl border border-blue-400/25 bg-blue-500/10 p-4">
+          <p role="status" className="font-medium">{health ? health.mode === "demo" ? "Offline demo — source excerpts, no AI generation" : "Live mode — AI-generated answers with retrieved sources" : "Checking runtime mode…"}</p>
+          <p className="text-sm text-slate-300">{health?.messageLimit ?? 6} user messages per temporary server session · {health?.sessionTtlMinutes ?? 10}-minute idle expiry · last 12 messages sent as context. Server restarts can clear knowledge and metrics; browser copies remain. No public agent is deployed.</p>
+          {health?.mode === "demo" && <p className="text-xs text-slate-300">Local keyword matching is not semantic AI. Add a source and ask about its contents. Live mode requires the operator to configure an API key.</p>}
+          <p className="text-xs text-amber-200">Avoid sensitive data. Configuration, source text, and recent chat are saved on this device; in live mode, relevant content is sent to the AI provider.</p>
+          {healthError && <div role="alert" className="text-sm text-red-200">{healthError} <Button size="sm" variant="ghost" onClick={() => setReload(value => value + 1)}>Retry connection</Button></div>}
+          {storageWarning && <p role="alert" className="text-sm text-amber-200">{storageWarning}</p>}
         </div>
-
+        <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)]">
+          <div className="min-w-0 space-y-5">
+            <AgentConfigurator config={config} onConfigUpdate={updateConfig} disabled={!sessionId || busy} />
+            {sessionId && <KnowledgeBaseWorkflow sessionId={sessionId} onKnowledgeUpdate={setKnowledge} onReady={setKnowledgeReady} disabled={busy} />}
+          </div>
+          <Card className="min-w-0 overflow-hidden border-white/10 bg-slate-800/90 text-white lg:sticky lg:top-4">
+            <CardHeader>
+              <CardTitle className="flex flex-wrap items-center justify-between gap-2"><span>3. Test {config.name || "your assistant"}</span><Badge variant="secondary">{config.useCase === "sales" ? "Sales" : "FAQ & support"}</Badge></CardTitle>
+              <CardDescription className="text-slate-300">{health?.mode === "demo" ? "See the matching source excerpts; this mode does not compose answers or reason about conversation history." : "Inspect answers and matched source previews. Generated answers can be wrong; verify important information."}</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div role="log" aria-label="Conversation" aria-live="polite" aria-relevant="additions" className="max-h-[60vh] min-h-64 space-y-4 overflow-y-auto rounded-lg bg-slate-950/50 p-3 sm:p-4">
+                {!messages.length && <div className="space-y-4 py-8 text-center"><p className="text-4xl" aria-hidden="true">✦</p><h2 className="font-semibold">A small, inspectable demo</h2><p className="text-sm text-slate-300">Load the fictional sample, then try a question.</p><Button variant="outline" className="h-auto whitespace-normal" onClick={() => setInput("What is the cancellation policy?")} disabled={busy}>Try: What is the cancellation policy?</Button></div>}
+                {messages.map((message, index) => <div key={message.messageId || `user-${index}`} className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}><article className={`min-w-0 max-w-[95%] rounded-xl p-3 sm:max-w-[90%] ${message.role === "user" ? "bg-gradient-to-r from-purple-600 to-blue-600" : "border border-slate-600 bg-slate-700"}`}>
+                  <p className="mb-2 text-xs font-semibold text-slate-200">{message.role === "user" ? "You" : message.mode === "demo" ? "Offline demo · source excerpts" : "Assistant"}</p>
+                  <p className="whitespace-pre-wrap break-words text-sm leading-relaxed">{message.content}</p>
+                  {message.role === "assistant" && <>
+                    <p className="mt-3 text-xs text-slate-300">{message.usedKnowledge ? `Retrieval: ${message.retrievalMode ?? "unknown"}` : "No matching knowledge used"}</p>
+                    {Boolean(message.chunks?.length) && <details className="mt-2"><summary className="cursor-pointer text-xs font-medium text-blue-200">Inspect {message.chunks!.length} matched source preview(s)</summary><div className="mt-2 space-y-2">{message.chunks!.map((chunk, chunkIndex) => <blockquote key={chunk.id || `${chunk.knowledgeId}-${chunkIndex}`} className="break-words rounded border-l-2 border-blue-400 bg-slate-900/40 p-2 text-xs"><p className="mb-1 font-semibold">{chunk.source}</p><p className="whitespace-pre-wrap text-slate-300">{chunk.preview}</p></blockquote>)}</div></details>}
+                    {message.messageId && <div className="mt-3 flex flex-wrap items-center gap-2" aria-label="Rate this response">{(["up", "down"] as const).map(value => <Button key={value} size="sm" variant={message.feedback === value ? "secondary" : "ghost"} aria-pressed={message.feedback === value} aria-label={value === "up" ? "Mark this response helpful" : "Mark this response unhelpful"} disabled={Boolean(feedbackBusy) || busy} onClick={() => feedback(message, value)}>{value === "up" ? "Helpful" : "Not helpful"}</Button>)}{feedbackBusy === message.messageId && <span role="status" className="text-xs">Saving…</span>}</div>}
+                  </>}
+                </article></div>)}
+                {busy && <p role="status" className="text-sm text-blue-200">{health?.mode === "demo" ? "Finding matching excerpts…" : "Generating a response…"}</p>}
+                <div ref={endRef} />
               </div>
+              {error && <p role="alert" className="rounded-lg border border-red-400/30 bg-red-500/10 p-3 text-sm text-red-200">{error}</p>}
+              <form className="space-y-3" onSubmit={event => { event.preventDefault(); void sendMessage(); }}>
+                <label htmlFor="chat-message" className="block text-sm font-medium">Message</label>
+                <Textarea id="chat-message" value={input} maxLength={2000} rows={3} disabled={busy || !sessionId || remaining === 0} placeholder="Ask about your knowledge…" onChange={event => setInput(event.target.value)} onKeyDown={event => { if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); void sendMessage(); } }} aria-describedby="message-help" />
+                <div className="flex flex-wrap items-center justify-between gap-3"><p id="message-help" className="text-xs text-slate-300">{input.length}/2,000 characters · Shift+Enter for a new line</p><Button type="submit" disabled={!canSend || Boolean(feedbackBusy)} className="bg-gradient-to-r from-blue-600 to-purple-600 px-6 text-white">{busy ? "Working…" : "Send message"}</Button></div>
+                {(!config.name.trim() || !config.goal.trim()) && <p className="text-sm text-amber-200">Add an agent name and goal before sending.</p>}
+                {remaining === 0 && <p role="status" className="text-sm text-amber-200">The 6-message demo limit is reached. The server session must expire before more messages can be sent. Refresh status after expiry.</p>}
+              </form>
+              <div className="space-y-2 border-t border-slate-600 pt-3 text-xs text-slate-300">
+                <div className="flex flex-wrap items-center justify-between gap-2"><p>{remaining === undefined ? "Checking message allowance…" : `${remaining} of ${health?.messageLimit ?? 6} messages remaining`} · Feedback: {analytics ? `${analytics.thumbsUp} helpful / ${analytics.thumbsDown} unhelpful` : "—"}</p><Button variant="ghost" size="sm" disabled={busy} onClick={() => refreshAnalytics()}>Refresh status</Button></div>
+                {analytics?.expiresAt && <p>Current server session expires: {new Date(analytics.expiresAt).toLocaleTimeString()}</p>}
+                {analyticsError && <p role="alert" className="text-amber-200">Metrics unavailable: {analyticsError}</p>}
+                <p>Recent chat is a browser copy, not a permanent server transcript. Feedback on expired server messages may no longer be available.</p>
+                {messages.length > 0 && <Button size="sm" variant="ghost" disabled={busy || Boolean(feedbackBusy)} onClick={() => { persistMessages([]); setError(""); }}>Clear local chat (does not reset allowance)</Button>}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </main>
     </div>
   );
 }

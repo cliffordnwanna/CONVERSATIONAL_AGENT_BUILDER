@@ -1,363 +1,56 @@
-"use client";
+﻿"use client";
 
-import { useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import BackButton from "@/components/BackButton";
-
-interface AnalyticsData {
-  conversations: number;
-  thumbsUp: number;
-  thumbsDown: number;
-  avgResponseTime?: number;
-  knowledgeUsage?: number;
-  costSavings?: number;
-}
-
-interface SessionData {
-  id: string;
-  timestamp: string;
-  messages: number;
-  satisfaction: number;
-  usedKnowledge: boolean;
-}
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { fetchJson, getBrowserSession, type SessionAnalytics } from "@/lib/browserSession";
 
 export default function AnalyticsPage() {
-  const [analytics] = useState<AnalyticsData>({
-    conversations: 127,
-    thumbsUp: 98,
-    thumbsDown: 2,
-    avgResponseTime: 1.2,
-    knowledgeUsage: 73,
-    costSavings: 2847.50,
-  });
-
-  const [sessions] = useState<SessionData[]>([
-    {
-      id: "session-001",
-      timestamp: "2026-03-26T10:30:00.000Z",
-      messages: 3,
-      satisfaction: 1,
-      usedKnowledge: true,
-    },
-    {
-      id: "session-002",
-      timestamp: "2026-03-25T14:15:00.000Z",
-      messages: 2,
-      satisfaction: 1,
-      usedKnowledge: false,
-    },
-  ]);
-  const [timeRange, setTimeRange] = useState("24h");
-  const [barHeights] = useState<number[]>(
-    [45, 30, 25, 20, 35, 50, 65, 70, 80, 55, 40, 60, 75, 50, 45, 35, 55, 70, 65, 50, 40, 30, 25, 35]
-  );
-
-  const satisfactionRate = analytics.conversations > 0 
-    ? Math.round((analytics.thumbsUp / (analytics.thumbsUp + analytics.thumbsDown)) * 100)
-    : 0;
-
-  const formatNumber = (num: number) => {
-    return new Intl.NumberFormat().format(num);
-  };
-
-  const formatCurrency = (num: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(num);
-  };
-
+  const [analytics, setAnalytics] = useState<SessionAnalytics | null>(null);
+  const [sessionId, setSessionId] = useState("");
+  const [busy, setBusy] = useState(true);
+  const [error, setError] = useState("");
+  const [updatedAt, setUpdatedAt] = useState("");
+  const [storageWarning, setStorageWarning] = useState(false);
+  const load = useCallback(async (signal?: AbortSignal) => {
+    const session = getBrowserSession();
+    setSessionId(session.id); setStorageWarning(!session.persistent); setBusy(true); setError("");
+    try {
+      const data = await fetchJson<SessionAnalytics>(`/api/analytics?sessionId=${encodeURIComponent(session.id)}`, { signal });
+      if (!signal?.aborted) { setAnalytics(data); setUpdatedAt(new Date().toLocaleTimeString()); }
+    } catch (err) { if (!signal?.aborted) setError(err instanceof Error ? err.message : "Could not load session analytics."); }
+    finally { if (!signal?.aborted) setBusy(false); }
+  }, []);
+  useEffect(() => {
+    const controller = new AbortController();
+    void Promise.resolve().then(() => { if (!controller.signal.aborted) void load(controller.signal); });
+    const refresh = () => { void load(controller.signal); };
+    window.addEventListener("focus", refresh);
+    return () => { controller.abort(); window.removeEventListener("focus", refresh); };
+  }, [load]);
+  const ratings = analytics ? analytics.thumbsUp + analytics.thumbsDown : 0;
+  const metrics = analytics ? [
+    ["Conversations", analytics.conversations.toLocaleString(), "Conversations tracked in the current server session"],
+    ["Messages", analytics.messages.toLocaleString(), "Successful user messages, not a traffic estimate"],
+    ["Helpful ratings", ratings ? `${Math.round(analytics.thumbsUp / ratings * 100)}%` : "No ratings", `${analytics.thumbsUp} helpful · ${analytics.thumbsDown} unhelpful`],
+    ["Average response time", analytics.messages ? `${analytics.avgResponseTime.toFixed(2)} s` : "—", "Measured end-to-end server response time"],
+    ["Knowledge usage", analytics.messages ? `${analytics.knowledgeUsage.toFixed(0)}%` : "—", "Responses that used knowledge sources"],
+    ["Model tokens", analytics.totalTokens.toLocaleString(), "No model tokens are used in offline demo mode"],
+    ["Estimated model cost", `$${analytics.estimatedCostUsd.toFixed(6)}`, "Estimate in USD, not a bill; excludes hosting and ingestion"],
+    ["Messages remaining", `${analytics.remainingMessages} / 6`, "Allowance for this temporary session"],
+  ] : [];
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white">
-      {/* Header */}
-      <div className="border-b border-white/10 backdrop-blur-sm bg-white/5">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-xl font-bold text-white">Analytics Dashboard</h1>
-              <p className="text-sm text-gray-300">Real-time performance metrics</p>
-            </div>
-            <div className="flex items-center gap-4">
-              <BackButton href="/" />
-              <Badge variant="outline" className="text-xs border-white/20 text-gray-300">
-                Live
-              </Badge>
-              <select
-                value={timeRange}
-                onChange={(e) => setTimeRange(e.target.value)}
-                className="px-3 py-1 border border-white/20 rounded-lg text-sm bg-slate-800 text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="1h" className="bg-slate-800 text-white">Last Hour</option>
-                <option value="24h" className="bg-slate-800 text-white">Last 24 Hours</option>
-                <option value="7d" className="bg-slate-800 text-white">Last 7 Days</option>
-                <option value="30d" className="bg-slate-800 text-white">Last 30 Days</option>
-              </select>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="container mx-auto px-4 py-6">
-        {/* Key Metrics */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          <Card className="relative overflow-hidden border-white/10 bg-white/5 backdrop-blur-sm">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-gray-300 flex items-center gap-2">
-                Total Conversations
-                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-white">
-                {formatNumber(analytics.conversations)}
-              </div>
-              <p className="text-sm text-green-400 mt-1">
-                +12% from last period
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="relative overflow-hidden border-white/10 bg-white/5 backdrop-blur-sm">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-gray-300">
-                Satisfaction Rate
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-white">
-                {satisfactionRate}%
-              </div>
-              <p className="text-sm text-blue-400 mt-1">
-                Above industry average
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="relative overflow-hidden border-white/10 bg-white/5 backdrop-blur-sm">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-gray-300">
-                Avg Response Time
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-white">
-                {analytics.avgResponseTime?.toFixed(1)}s
-              </div>
-              <p className="text-sm text-green-400 mt-1">
-                -0.3s improvement
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="relative overflow-hidden border-white/10 bg-white/5 backdrop-blur-sm">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-gray-300">
-                Cost Savings
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-white">
-                {formatCurrency(analytics.costSavings || 0)}
-              </div>
-              <p className="text-sm text-green-400 mt-1">
-                This month
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Charts and Detailed Analytics */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-          {/* Conversation Chart */}
-          <Card className="lg:col-span-2 border-white/10 bg-white/5 backdrop-blur-sm">
-            <CardHeader>
-              <CardTitle className="text-white">Conversation Volume</CardTitle>
-              <CardDescription className="text-gray-300">
-                Messages per hour over the selected time range
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="h-64 flex items-end justify-between px-4">
-                {/* Simple bar chart visualization */}
-                {barHeights.map((height, i) => (
-                  <div
-                    key={i}
-                    className="w-8 bg-gradient-to-t from-blue-500 to-blue-400 rounded-t"
-                    style={{ height: `${height}%` }}
-                  />
-                ))}
-              </div>
-              <div className="flex justify-between mt-2 text-xs text-gray-400">
-                <span>12 AM</span>
-                <span>6 PM</span>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Knowledge Base Usage */}
-          <Card className="border-white/10 bg-white/5 backdrop-blur-sm">
-            <CardHeader>
-              <CardTitle className="text-white">Knowledge Base</CardTitle>
-              <CardDescription className="text-gray-300">
-                How often your knowledge base is used
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="text-center">
-                <div className="text-4xl font-bold text-blue-400 mb-2">
-                  {analytics.knowledgeUsage}%
-                </div>
-                <p className="text-sm text-gray-300">Usage Rate</p>
-              </div>
-              
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-300">Documents</span>
-                  <span className="font-medium text-white">12</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-300">Total Queries</span>
-                  <span className="font-medium text-white">{analytics.conversations}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-300">Knowledge Hits</span>
-                  <span className="font-medium text-green-400">
-                    {Math.floor(analytics.conversations * ((analytics.knowledgeUsage || 0) / 100))}
-                  </span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Recent Sessions */}
-        <Card className="border-white/10 bg-white/5 backdrop-blur-sm">
-          <CardHeader>
-            <CardTitle className="text-white">Recent Sessions</CardTitle>
-            <CardDescription className="text-gray-300">
-              Latest agent interactions and performance
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {sessions.length === 0 ? (
-                <div className="text-center py-8 text-gray-400">
-                  No sessions recorded yet
-                </div>
-              ) : (
-                sessions.map((session) => (
-                  <div
-                    key={session.id}
-                    className="flex items-center justify-between p-4 bg-white/5 rounded-lg hover:bg-white/10 transition-colors"
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 bg-blue-500/20 rounded-full flex items-center justify-center">
-                        <span className="text-lg">
-                          {session.satisfaction ? "😊" : "😐"}
-                        </span>
-                      </div>
-                      <div>
-                        <p className="font-medium text-white">
-                          {new Date(session.timestamp).toLocaleString()}
-                        </p>
-                        <p className="text-sm text-gray-400">
-                          {session.messages} messages • {session.usedKnowledge ? "Used KB" : "General"}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Badge variant={session.satisfaction ? "default" : "secondary"}>
-                        {session.satisfaction ? "Satisfied" : "Neutral"}
-                      </Badge>
-                      <Badge variant="outline" className="text-xs">
-                        {session.usedKnowledge ? "🧠" : "💬"}
-                      </Badge>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Performance Insights */}
-        <div className="grid md:grid-cols-2 gap-6 mt-8">
-          <Card className="border-white/10 bg-white/5 backdrop-blur-sm">
-            <CardHeader>
-              <CardTitle className="text-white">Performance Insights</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-green-500/20 rounded-full flex items-center justify-center">
-                  <span className="text-green-400 font-bold">✓</span>
-                </div>
-                <div>
-                  <p className="font-medium text-white">Excellent Response Time</p>
-                  <p className="text-sm text-gray-400">
-                    Under 2 seconds average
-                  </p>
-                </div>
-              </div>
-              
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-blue-500/20 rounded-full flex items-center justify-center">
-                  <span className="text-blue-400 font-bold">📈</span>
-                </div>
-                <div>
-                  <p className="font-medium text-white">High Knowledge Usage</p>
-                  <p className="text-sm text-gray-400">
-                    {analytics.knowledgeUsage}% of queries
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-white/10 bg-white/5 backdrop-blur-sm">
-            <CardHeader>
-              <CardTitle className="text-white">ROI Calculator</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="text-center">
-                <p className="text-3xl font-bold text-green-400">
-                  {formatCurrency((analytics.costSavings || 0) * 12)}
-                </p>
-                <p className="text-sm text-gray-300">Annual Savings</p>
-              </div>
-              
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-300">Human Hours Saved</span>
-                  <span className="font-medium text-white">
-                    {formatNumber(Math.floor(analytics.conversations * 0.5))} hrs
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-300">Efficiency Gain</span>
-                  <span className="font-medium text-green-400">+67%</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Action Buttons */}
-        <div className="mt-8 flex justify-center gap-4">
-          <Button asChild className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white">
-            <Link href="/builder"> Build Another Agent</Link>
-          </Button>
-          <Button variant="outline" asChild className="border-white/20 text-gray-200 hover:bg-white/10">
-            <Link href="/deploy"> Deploy to Production</Link>
-          </Button>
-          <Button variant="outline" asChild className="border-white/20 text-gray-200 hover:bg-white/10">
-            <Link href="/"> Export Report</Link>
-          </Button>
-        </div>
-      </div>
+      <main className="container mx-auto space-y-6 px-4 py-8">
+        <header className="flex flex-wrap items-center justify-between gap-4"><div><h1 className="text-2xl font-bold">Session analytics</h1><p className="mt-2 text-sm text-slate-300">Actual activity for browser session {sessionId ? sessionId.slice(0, 8) : "loading…"}</p></div><nav aria-label="Analytics navigation" className="flex gap-4 text-sm text-blue-200"><Link href="/builder">Playground</Link><Link href="/deploy">Export</Link><Link href="/">Home</Link></nav></header>
+        <Card className="border-white/10 bg-white/5 text-white"><CardHeader><CardTitle>A session snapshot, not a production dashboard</CardTitle><CardDescription className="text-slate-300">Metrics come from the current in-memory server session. They expire after 10 minutes or a server restart and may differ between server instances. Browser-saved chat is not included after server data expires. No historical trends, ROI, or visitor counts are inferred.</CardDescription></CardHeader><CardContent className="flex flex-wrap items-center gap-4"><Button disabled={busy} onClick={() => load()}>{busy ? "Loading…" : "Refresh metrics"}</Button>{updatedAt && <p className="text-xs text-slate-300">{error ? "Last successful update" : "Updated"}: {updatedAt}</p>}{analytics?.expiresAt && <p className="text-xs text-slate-300">Expires: {new Date(analytics.expiresAt).toLocaleString()}</p>}</CardContent></Card>
+        {storageWarning && <p role="alert" className="text-sm text-amber-200">Browser storage is unavailable; session identity may not survive navigation or reload.</p>}
+        {error && <p role="alert" className="rounded-lg border border-red-400/30 bg-red-500/10 p-4 text-red-200">{error} {analytics ? "The figures below are the last successful snapshot, not current data." : "Use Refresh metrics to retry."}</p>}
+        {busy && <p role="status" className="text-sm text-blue-200">Fetching session metrics…</p>}
+        {analytics && analytics.messages === 0 && <section className="rounded-xl border border-blue-400/25 bg-blue-500/10 p-6"><h2 className="text-lg font-semibold">No activity in this server session yet</h2><p className="mt-2 text-sm text-slate-300">Try the fictional sample in the playground and send a message. If you already chatted, the temporary server data may have expired.</p><Button asChild className="mt-4 bg-blue-600 text-white"><Link href="/builder">Open playground</Link></Button></section>}
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{metrics.map(([label, value, description]) => <Card key={label} className="min-w-0 border-white/10 bg-white/5 text-white backdrop-blur-sm"><CardHeader><CardTitle className="text-sm font-medium text-slate-300">{label}</CardTitle></CardHeader><CardContent><p className="break-words text-3xl font-bold">{value}</p><p className="mt-3 text-xs text-slate-400">{description}</p></CardContent></Card>)}</div>
+      </main>
     </div>
   );
 }
