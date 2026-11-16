@@ -1,54 +1,56 @@
-interface VectorChunk {
+export interface VectorChunk {
   id: string;
   content: string;
   embedding: number[];
   metadata: {
     source: string;
     type: string;
+    knowledgeId: string;
   };
 }
 
-class InMemoryVectorStore {
-  private vectors: Map<string, VectorChunk[]> = new Map();
-  
-  // ADD must APPEND, not overwrite (Adjustment 1)
+export function cosineSimilarity(a: number[], b: number[]): number {
+  if (!a.length || a.length !== b.length || !a.every(Number.isFinite) || !b.every(Number.isFinite)) return 0;
+  const dot = a.reduce((sum, value, i) => sum + value * b[i], 0);
+  const norm = Math.sqrt(a.reduce((sum, value) => sum + value * value, 0)) *
+    Math.sqrt(b.reduce((sum, value) => sum + value * value, 0));
+  return norm ? dot / norm : 0;
+}
+
+export class InMemoryVectorStore {
+  private vectors = new Map<string, VectorChunk[]>();
+
   add(sessionId: string, chunks: VectorChunk[]) {
-    const existing = this.vectors.get(sessionId) || [];
-    const merged = [...existing, ...chunks];
-    this.vectors.set(sessionId, merged);
+    if (chunks.some(chunk => !chunk.embedding?.length || !chunk.embedding.every(Number.isFinite))) {
+      throw new Error("Invalid embedding: knowledge was not saved");
+    }
+    const merged = new Map((this.vectors.get(sessionId) || []).map(chunk => [chunk.id, chunk]));
+    for (const chunk of chunks) merged.set(chunk.id, chunk);
+    this.vectors.set(sessionId, [...merged.values()]);
   }
-  
-  // Search with semantic similarity
-  search(sessionId: string, queryEmbedding: number[], topK = 3): VectorChunk[] {
-    const vectors = this.vectors.get(sessionId) || [];
-    
-    const scored = vectors.map(chunk => ({
-      ...chunk,
-      score: this.cosineSimilarity(queryEmbedding, chunk.embedding)
-    }));
-    
-    return scored
-      .sort((a, b) => b.score - a.score)
+
+  search(sessionId: string, queryEmbedding: number[], topK = 3, knowledgeIds?: string[], minScore = 0.2) {
+    if (!Number.isInteger(topK) || topK < 1) return [];
+    const selected = knowledgeIds ? new Set(knowledgeIds) : undefined;
+    return (this.vectors.get(sessionId) || [])
+      .filter(chunk => !selected || selected.has(chunk.metadata.knowledgeId))
+      .map(chunk => ({ ...chunk, score: cosineSimilarity(queryEmbedding, chunk.embedding) }))
+      .filter(chunk => chunk.score > 0 && chunk.score >= minScore)
+      .sort((a, b) => b.score - a.score || a.id.localeCompare(b.id))
       .slice(0, topK);
   }
-  
-  private cosineSimilarity(a: number[], b: number[]): number {
-    const dot = a.reduce((sum, ai, i) => sum + ai * b[i], 0);
-    const normA = Math.sqrt(a.reduce((sum, ai) => sum + ai * ai, 0));
-    const normB = Math.sqrt(b.reduce((sum, bi) => sum + bi * bi, 0));
-    return dot / (normA * normB);
-  }
-  
-  // Get all vectors for a session (for debugging)
+
   getAll(sessionId: string): VectorChunk[] {
     return this.vectors.get(sessionId) || [];
   }
-  
-  // Clear session (for testing)
+
+  removeSource(sessionId: string, knowledgeId: string) {
+    this.vectors.set(sessionId, this.getAll(sessionId).filter(chunk => chunk.metadata.knowledgeId !== knowledgeId));
+  }
+
   clear(sessionId: string) {
     this.vectors.delete(sessionId);
   }
 }
 
 export const vectorStore = new InMemoryVectorStore();
-export type { VectorChunk };

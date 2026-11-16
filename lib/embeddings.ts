@@ -1,51 +1,24 @@
 import { openai } from "@/lib/openai";
+import { demoEmbedding, runtimeMode } from "@/lib/demo";
 
 export async function createEmbedding(text: string): Promise<number[]> {
-  try {
-    // Clean and normalize text
-    const cleanText = text.replace(/\n/g, " ").trim();
-    
-    if (!cleanText) {
-      throw new Error("Cannot create embedding for empty text");
-    }
-    
-    const response = await openai.embeddings.create({
-      model: "text-embedding-3-small", // Cheapest model
-      input: cleanText
-    });
-    
-    return response.data[0].embedding;
-  } catch (error) {
-    console.error("Embedding error:", error);
-    throw new Error("Failed to create embedding");
-  }
+  return (await createBatchEmbeddings([text]))[0];
 }
 
 export async function createBatchEmbeddings(texts: string[]): Promise<number[][]> {
-  // Filter out empty texts to avoid wasting tokens (Adjustment 3)
-  const validTexts = texts.filter(text => text.trim().length > 0);
-  
-  if (validTexts.length === 0) {
-    return [];
-  }
-  
-  const embeddings = [];
-  
-  // Process in batches to avoid rate limits
-  for (let i = 0; i < validTexts.length; i += 10) {
-    const batch = validTexts.slice(i, i + 10);
-    
-    try {
-      const batchEmbeddings = await Promise.all(
-        batch.map(text => createEmbedding(text))
-      );
-      embeddings.push(...batchEmbeddings);
-    } catch (error) {
-      console.error("Batch embedding error:", error);
-      // Continue with other batches
-      continue;
+  const inputs = texts.map(text => text.replace(/\s+/g, " ").trim());
+  if (inputs.some(text => !text)) throw new Error("Cannot embed empty text");
+  if (runtimeMode() === "demo") return inputs.map(demoEmbedding);
+
+  const embeddings: number[][] = [];
+  for (let i = 0; i < inputs.length; i += 64) {
+    const batch = inputs.slice(i, i + 64);
+    const response = await openai.embeddings.create({ model: "text-embedding-3-small", input: batch });
+    const ordered = [...response.data].sort((a, b) => a.index - b.index);
+    if (ordered.length !== batch.length || ordered.some((item, index) => item.index !== index || !item.embedding.length || !item.embedding.every(Number.isFinite))) {
+      throw new Error("Incomplete embedding response: knowledge was not saved");
     }
+    embeddings.push(...ordered.map(item => item.embedding));
   }
-  
   return embeddings;
 }

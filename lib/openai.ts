@@ -6,7 +6,9 @@ export const openai = new Proxy({} as OpenAI, {
   get(_target, prop, receiver) {
     if (!_openai) {
       _openai = new OpenAI({
-        apiKey: process.env.OPENAI_API_KEY!,
+        apiKey: process.env.OPENAI_API_KEY,
+        timeout: 30_000,
+        maxRetries: 1,
       });
     }
     return Reflect.get(_openai, prop, receiver);
