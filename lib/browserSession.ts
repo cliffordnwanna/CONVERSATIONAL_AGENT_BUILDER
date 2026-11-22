@@ -51,6 +51,7 @@ export interface SessionAnalytics {
 
 export interface HealthStatus {
   mode: "demo" | "live";
+  degraded?: boolean;
   storage: "memory";
   messageLimit: number;
   sessionTtlMinutes: number;

@@ -31,7 +31,7 @@ Built with Next.js 16, TypeScript, and OpenAI. The [live demo](https://conversat
 - **Measured analytics** — Completed turns, actual latency, source-context usage, replaceable feedback, reported model tokens, and indicative generation cost. No invented savings.
 - **Demo lifecycle** — Sample onboarding, six completed turns per session, source deletion, browser-local state, and configuration export.
 - **Regression evidence** — Automated API/core tests, mocked live-provider tests, deterministic retrieval evaluation, and CI.
-- **Responsive interface** — Dark theme, mobile navigation, loading states, and actionable errors.
+- **One-workspace interface** — A light, calm layout with a drag-and-drop knowledge panel (PDF, DOCX, TXT, Markdown, pasted text, web page), a chat with pinned composer, and a settings tab. On phones the three panels become tabs. Designed for desktop and mobile; see [DESIGN.md](DESIGN.md).
 
 ---
 
@@ -110,7 +110,7 @@ app/
     health/route.ts         # Runtime mode and demo limits
 
 components/
-  AgentConfigurator.tsx     # Persisted agent settings
+  AgentConfigurator.tsx     # Assistant settings panel (persisted in the browser)
   KnowledgeUpload.tsx       # Compatibility wrapper for knowledge workflow
   KnowledgeBaseWorkflow.tsx # Sample, files, text, website, and source management
   ui/                       # shadcn/ui primitives

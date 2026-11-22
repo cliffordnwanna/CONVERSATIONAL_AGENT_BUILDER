@@ -11,8 +11,8 @@ export default function BuilderPage() {
 
 function BuilderLoading() {
   return (
-    <div className="min-h-screen flex items-center justify-center text-gray-500">
-      Loading agent builder...
+    <div role="status" className="flex min-h-[60dvh] items-center justify-center text-sm text-muted-foreground">
+      Loading the builder…
     </div>
   );
 }

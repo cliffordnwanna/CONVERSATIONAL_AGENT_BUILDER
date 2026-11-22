@@ -1,44 +1,79 @@
 ﻿import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
-const features = [
-  { icon: "✦", title: "Configure and test", detail: "Choose FAQ or sales, give your assistant a name, and set its tone and goal. Every chat request includes those settings." },
-  { icon: "▤", title: "Inspect the evidence", detail: "Load a fictional sample, paste text, upload TXT/PDF/DOCX, or import a public page. Inspect matched source excerpts alongside replies." },
-  { icon: "↗", title: "Measure real activity", detail: "See your session’s actual messages, response time, feedback, and model usage. Export your browser-local configuration as JSON." },
+const steps = [
+  { title: "Add knowledge", detail: "Drop in a PDF, Word file, text or Markdown file, paste text, or import a public web page. Or use the built-in sample." },
+  { title: "Ask a question", detail: "The assistant answers only from your sources, and declines questions they do not cover." },
+  { title: "Check the evidence", detail: "Open the exact passages behind each answer and see whether it came from live AI or from keyword matching." },
 ];
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white">
-      <main className="container mx-auto px-4 py-12 sm:py-20">
-        <section className="mx-auto mb-16 max-w-4xl text-center">
-          <Badge className="mb-5 border-blue-400/30 bg-blue-500/20 text-blue-200">Portfolio project · interactive demo</Badge>
-          <h1 className="mb-6 bg-gradient-to-r from-blue-300 to-purple-300 bg-clip-text text-4xl font-bold leading-tight text-transparent sm:text-6xl">Build a small assistant.<br />See what it knows.</h1>
-          <p className="mx-auto mb-8 max-w-2xl text-base leading-relaxed text-slate-300 sm:text-xl">Explore a knowledge-grounded agent workflow, from configuration to source inspection. Start with fictional sample data — no account or credentials needed in offline demo mode.</p>
-          <div className="flex flex-col justify-center gap-3 sm:flex-row"><Button asChild size="lg" className="bg-gradient-to-r from-blue-600 to-purple-600 text-white"><Link href="/builder">Try the playground</Link></Button><Button asChild size="lg" variant="outline" className="border-white/20"><Link href="#how-it-works">See how it works</Link></Button></div>
-          <p className="mt-5 text-xs text-slate-400">6 messages per 10-minute in-memory session. This is a demo, not a hosted production agent service.</p>
-        </section>
-        <section id="features" className="mb-16 grid gap-5 md:grid-cols-3" aria-label="Demo features">
-          {features.map(feature => <Card key={feature.title} className="border-white/10 bg-white/5 text-white backdrop-blur-sm transition-colors hover:bg-white/10"><CardHeader><span aria-hidden="true" className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-blue-500/20 text-2xl text-blue-200">{feature.icon}</span><CardTitle>{feature.title}</CardTitle><CardDescription className="leading-relaxed text-slate-300">{feature.detail}</CardDescription></CardHeader></Card>)}
-        </section>
-        <section id="how-it-works" className="mb-16 rounded-2xl border border-white/10 bg-slate-900/50 p-6 sm:p-10">
-          <h2 className="mb-6 text-2xl font-bold">A three-minute walkthrough</h2>
-          <ol className="grid list-inside list-decimal gap-6 text-blue-200 md:grid-cols-3"><li><span className="font-semibold text-white">Load the sample</span><p className="mt-2 text-sm leading-relaxed text-slate-300">Open the playground and add the fictional Atlas Studio knowledge. Read its short policy before asking a question.</p></li><li><span className="font-semibold text-white">Ask and inspect</span><p className="mt-2 text-sm leading-relaxed text-slate-300">Ask “What is the cancellation policy?” Expand the matched sources and mark whether the response was helpful.</p></li><li><span className="font-semibold text-white">Check your session</span><p className="mt-2 text-sm leading-relaxed text-slate-300">Visit analytics to see the request and your feedback. Download your configuration if you want a local record.</p></li></ol>
-        </section>
-        <section id="templates" className="mb-16">
-          <h2 className="mb-6 text-center text-2xl font-bold">Choose a starting point</h2>
-          <div className="mx-auto grid max-w-3xl gap-5 sm:grid-cols-2">{[{ id: "faq", title: "FAQ & support", description: "Explore policies, opening hours, and answers grounded in your documents." }, { id: "sales", title: "Sales assistant", description: "Explore product information with a sales-oriented prompt in live AI mode." }].map(template => <Card key={template.id} className="border-white/10 bg-white/5 text-white"><CardHeader><CardTitle>{template.title}</CardTitle><CardDescription className="text-slate-300">{template.description}</CardDescription></CardHeader><CardContent><Button asChild className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white"><Link href={`/builder?template=${template.id}`}>Start {template.title.toLowerCase()}</Link></Button></CardContent></Card>)}</div>
-        </section>
-        <section className="mx-auto max-w-3xl space-y-4 rounded-2xl border border-amber-400/20 bg-amber-500/5 p-6">
-          <h2 className="text-xl font-semibold">What this demo does — and doesn’t do</h2>
-          <p className="text-sm leading-relaxed text-slate-300"><strong className="text-white">Offline demo:</strong> local keyword matching returns source excerpts. It does not generate AI answers or provide semantic understanding. The builder clearly shows which runtime mode is active.</p>
-          <p className="text-sm leading-relaxed text-slate-300"><strong className="text-white">Live mode:</strong> when the operator configures an API key, embeddings and language-model responses use an external provider and may incur costs. Answers still need verification.</p>
-          <p className="text-sm leading-relaxed text-slate-300">Server knowledge and metrics are temporary. Settings, source copies, and recent chat stay in your browser. Avoid sensitive data. There is no authentication, permanent hosting, public agent deployment, billing, or claimed compliance certification.</p>
-          <div className="flex flex-wrap gap-4 pt-2 text-sm text-blue-200"><Link href="/builder">Open playground →</Link><Link href="/analytics">View session analytics →</Link><Link href="/deploy">Export configuration →</Link></div>
-        </section>
-      </main>
-    </div>
+    <main className="mx-auto w-full max-w-[1400px] px-4 lg:px-6">
+      <section className="max-w-3xl py-12 sm:py-20">
+        <h1 className="text-4xl font-semibold leading-[1.1] tracking-tight text-balance sm:text-5xl">Ask your documents questions. See exactly what answered.</h1>
+        <p className="mt-5 max-w-2xl text-lg leading-relaxed text-muted-foreground">
+          A small document-grounded assistant you can try in a minute. Upload a file or use the sample, chat with it, and inspect the source passages behind every reply.
+        </p>
+        <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+          <Button asChild size="lg"><Link href="/builder">Open the builder</Link></Button>
+          <Button asChild size="lg" variant="outline"><Link href="#how-it-works">How it works</Link></Button>
+        </div>
+        <p className="mt-4 text-sm text-muted-foreground">An engineering demo, not a hosted agent service. Six messages per session.</p>
+      </section>
+
+      <section id="how-it-works" aria-labelledby="how-heading" className="border-t py-12">
+        <h2 id="how-heading" className="text-2xl font-semibold tracking-tight">How it works</h2>
+        <ol className="mt-6 grid gap-8 md:grid-cols-3">
+          {steps.map((step, index) => (
+            <li key={step.title} className="space-y-2">
+              <p className="tnum text-sm font-medium text-primary">Step {index + 1}</p>
+              <h3 className="text-base font-semibold">{step.title}</h3>
+              <p className="text-sm leading-relaxed text-muted-foreground">{step.detail}</p>
+            </li>
+          ))}
+        </ol>
+      </section>
+
+      <section aria-labelledby="modes-heading" className="border-t py-12">
+        <h2 id="modes-heading" className="text-2xl font-semibold tracking-tight">What it supports</h2>
+        <dl className="mt-6 grid gap-x-12 gap-y-6 md:grid-cols-2">
+          <div>
+            <dt className="text-sm font-semibold">Sources</dt>
+            <dd className="mt-1 max-w-prose text-sm leading-relaxed text-muted-foreground">PDF, Word (DOCX), TXT and Markdown files up to 5 MB each, pasted text, and public web pages. Scanned or image-only PDFs may contain no readable text. Up to 20 sources per session.</dd>
+          </div>
+          <div>
+            <dt className="text-sm font-semibold">Live mode</dt>
+            <dd className="mt-1 max-w-prose text-sm leading-relaxed text-muted-foreground">Semantic retrieval and AI-written answers with citations, using an external AI provider. Answers can still be wrong, so check the sources.</dd>
+          </div>
+          <div>
+            <dt className="text-sm font-semibold">Offline mode</dt>
+            <dd className="mt-1 max-w-prose text-sm leading-relaxed text-muted-foreground">If no key is configured, or the AI service is unavailable, it falls back to keyword matching and shows the matching excerpts. It is labelled as such and does not generate answers.</dd>
+          </div>
+          <div>
+            <dt className="text-sm font-semibold">Starting points</dt>
+            <dd className="mt-1 text-sm leading-relaxed text-muted-foreground">
+              <Link href="/builder?template=faq" className="text-primary underline underline-offset-4">FAQ and support</Link>
+              <span aria-hidden="true"> · </span>
+              <Link href="/builder?template=sales" className="text-primary underline underline-offset-4">Sales assistant</Link>
+            </dd>
+          </div>
+        </dl>
+      </section>
+
+      <section aria-labelledby="limits-heading" className="border-t py-12">
+        <h2 id="limits-heading" className="text-2xl font-semibold tracking-tight">Limits</h2>
+        <ul className="mt-4 max-w-3xl list-disc space-y-2 pl-5 text-sm leading-relaxed text-muted-foreground">
+          <li>Knowledge and metrics live in server memory for about 10 minutes of inactivity. Your settings, source copies and recent chat stay in this browser.</li>
+          <li>There is no sign-in, permanent storage, billing or public agent hosting.</li>
+          <li>In live mode, your document text and questions are sent to the AI provider. Do not upload sensitive or personal data.</li>
+        </ul>
+        <div className="mt-6 flex flex-wrap gap-x-6 gap-y-2 text-sm">
+          <Link href="/builder" className="text-primary underline underline-offset-4">Open the builder</Link>
+          <Link href="/analytics" className="text-primary underline underline-offset-4">Session analytics</Link>
+          <Link href="/deploy" className="text-primary underline underline-offset-4">Export configuration</Link>
+        </div>
+      </section>
+    </main>
   );
 }

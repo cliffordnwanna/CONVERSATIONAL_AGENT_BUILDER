@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { fetchJson, getBrowserSession, type SessionAnalytics } from "@/lib/browserSession";
 
 export default function AnalyticsPage() {
@@ -41,16 +40,43 @@ export default function AnalyticsPage() {
     ["Messages remaining", `${analytics.remainingMessages} / 6`, "Allowance for this temporary session"],
   ] : [];
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white">
-      <main className="container mx-auto space-y-6 px-4 py-8">
-        <header className="flex flex-wrap items-center justify-between gap-4"><div><h1 className="text-2xl font-bold">Session analytics</h1><p className="mt-2 text-sm text-slate-300">Actual activity for browser session {sessionId ? sessionId.slice(0, 8) : "loading…"}</p></div><nav aria-label="Analytics navigation" className="flex gap-4 text-sm text-blue-200"><Link href="/builder">Playground</Link><Link href="/deploy">Export</Link><Link href="/">Home</Link></nav></header>
-        <Card className="border-white/10 bg-white/5 text-white"><CardHeader><CardTitle>A session snapshot, not a production dashboard</CardTitle><CardDescription className="text-slate-300">Metrics come from the current in-memory server session. They expire after 10 minutes or a server restart and may differ between server instances. Browser-saved chat is not included after server data expires. No historical trends, ROI, or visitor counts are inferred.</CardDescription></CardHeader><CardContent className="flex flex-wrap items-center gap-4"><Button disabled={busy} onClick={() => load()}>{busy ? "Loading…" : "Refresh metrics"}</Button>{updatedAt && <p className="text-xs text-slate-300">{error ? "Last successful update" : "Updated"}: {updatedAt}</p>}{analytics?.expiresAt && <p className="text-xs text-slate-300">Expires: {new Date(analytics.expiresAt).toLocaleString()}</p>}</CardContent></Card>
-        {storageWarning && <p role="alert" className="text-sm text-amber-200">Browser storage is unavailable; session identity may not survive navigation or reload.</p>}
-        {error && <p role="alert" className="rounded-lg border border-red-400/30 bg-red-500/10 p-4 text-red-200">{error} {analytics ? "The figures below are the last successful snapshot, not current data." : "Use Refresh metrics to retry."}</p>}
-        {busy && <p role="status" className="text-sm text-blue-200">Fetching session metrics…</p>}
-        {analytics && analytics.messages === 0 && <section className="rounded-xl border border-blue-400/25 bg-blue-500/10 p-6"><h2 className="text-lg font-semibold">No activity in this server session yet</h2><p className="mt-2 text-sm text-slate-300">Try the fictional sample in the playground and send a message. If you already chatted, the temporary server data may have expired.</p><Button asChild className="mt-4 bg-blue-600 text-white"><Link href="/builder">Open playground</Link></Button></section>}
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{metrics.map(([label, value, description]) => <Card key={label} className="min-w-0 border-white/10 bg-white/5 text-white backdrop-blur-sm"><CardHeader><CardTitle className="text-sm font-medium text-slate-300">{label}</CardTitle></CardHeader><CardContent><p className="break-words text-3xl font-bold">{value}</p><p className="mt-3 text-xs text-slate-400">{description}</p></CardContent></Card>)}</div>
-      </main>
-    </div>
+    <main className="mx-auto w-full max-w-[1400px] space-y-6 px-4 py-8 lg:px-6">
+      <header className="space-y-1">
+        <h1 className="text-2xl font-semibold tracking-tight">Session analytics</h1>
+        <p className="text-sm text-muted-foreground">Actual activity for browser session <span className="tnum">{sessionId ? sessionId.slice(0, 8) : "loading…"}</span></p>
+      </header>
+
+      <section className="max-w-3xl space-y-3 text-sm text-muted-foreground">
+        <p><span className="font-medium text-foreground">A session snapshot, not a production dashboard.</span> Metrics come from the current in-memory server session. They expire after 10 minutes or a server restart and may differ between server instances. Browser-saved chat is not included after server data expires. No historical trends, ROI, or visitor counts are inferred.</p>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+          <Button variant="outline" disabled={busy} onClick={() => load()}>{busy ? "Loading…" : "Refresh metrics"}</Button>
+          {updatedAt && <p className="tnum text-xs">{error ? "Last successful update" : "Updated"}: {updatedAt}</p>}
+          {analytics?.expiresAt && <p className="tnum text-xs">Expires: {new Date(analytics.expiresAt).toLocaleString()}</p>}
+        </div>
+      </section>
+
+      {storageWarning && <p role="alert" className="text-sm text-warn">Browser storage is unavailable; session identity may not survive navigation or reload.</p>}
+      {error && <p role="alert" className="rounded-md border border-destructive/30 bg-card p-4 text-sm text-destructive">{error} {analytics ? "The figures below are the last successful snapshot, not current data." : "Use Refresh metrics to retry."}</p>}
+      {busy && <p role="status" className="text-sm text-muted-foreground">Fetching session metrics…</p>}
+      {analytics && analytics.messages === 0 && (
+        <section className="max-w-3xl space-y-3 rounded-lg border bg-card p-5">
+          <h2 className="text-base font-semibold">No activity in this server session yet</h2>
+          <p className="text-sm text-muted-foreground">Add a document in the builder, or try the sample, and send a message. If you already chatted, the temporary server data may have expired.</p>
+          <Button asChild><Link href="/builder">Open the builder</Link></Button>
+        </section>
+      )}
+
+      {metrics.length > 0 && (
+        <dl className="grid overflow-hidden rounded-lg border bg-card sm:grid-cols-2 lg:grid-cols-4 [&>div]:border-b [&>div]:p-5 sm:[&>div:nth-child(odd)]:border-r lg:[&>div]:border-r lg:[&>div:nth-child(4n)]:border-r-0 sm:max-lg:[&>div:nth-child(even)]:border-r-0">
+          {metrics.map(([label, value, description]) => (
+            <div key={label} className="min-w-0">
+              <dt className="text-sm text-muted-foreground">{label}</dt>
+              <dd className="tnum mt-1 break-words text-3xl font-semibold tracking-tight">{value}</dd>
+              <dd className="mt-2 text-xs text-muted-foreground">{description}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
+    </main>
   );
 }
