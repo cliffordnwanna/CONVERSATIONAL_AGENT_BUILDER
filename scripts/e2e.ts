@@ -65,6 +65,10 @@ async function main() {
   check("chat uses knowledge", first.status === 200 && first.body.usedKnowledge === true && /30/.test(first.body.reply), String(first.body?.reply).slice(0, 60));
   check("retrieval mode matches runtime", first.body?.retrievalMode === (live ? "semantic" : "lexical"), first.body?.retrievalMode);
   check("source chunks returned", Array.isArray(first.body?.chunks) && first.body.chunks.length >= 1);
+  const timings = first.body?.timings ?? {};
+  check("chat response carries a requestId", typeof first.body?.requestId === "string" && first.body.requestId.length >= 32 && first.body.requestId !== first.body.messageId);
+  check("chat response carries timings", ["retrievalMs", "generationMs", "totalMs"].every(key => typeof timings[key] === "number" && timings[key] >= 0) && timings.totalMs >= timings.retrievalMs, JSON.stringify(timings));
+  check("token usage matches the mode", live ? first.body?.usage?.totalTokens > 0 : first.body?.usage === null, JSON.stringify(first.body?.usage));
 
   const follow = await json("POST", "/api/chat", { ...chat, message: "And how long until I get the money back?" });
   check("follow-up answered", follow.status === 200 && !!follow.body?.reply);

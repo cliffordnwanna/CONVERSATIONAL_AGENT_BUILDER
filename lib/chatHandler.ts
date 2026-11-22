@@ -4,9 +4,13 @@ import { markProviderDegraded, providerDegraded, runtimeMode } from "@/lib/demo"
 import { getSession, MESSAGE_LIMIT, sessionAnalytics } from "@/lib/sessionStore";
 import { errorResponse, readJson, RequestError } from "@/lib/validation";
 
+const roundMs = (value: number) => Math.round(value * 10) / 10;
+
 export async function handleChat(req: Request): Promise<Response> {
   let release: (() => void) | undefined;
   try {
+    const requestStarted = performance.now();
+    const requestId = crypto.randomUUID();
     const input = parseChat(await readJson(req));
     const session = getSession(input.sessionId);
     if (session.inFlight) throw new RequestError("A reply is already being generated. Please wait.", 409);
@@ -16,10 +20,14 @@ export async function handleChat(req: Request): Promise<Response> {
     release = () => { session.inFlight = false; };
     const started = performance.now();
     const { chunks, retrievalMode, hasKnowledge } = await retrieve(input);
+    const retrievalMs = performance.now() - started;
+    const generationStarted = performance.now();
     let mode = runtimeMode();
     const history = session.messages.length ? session.messages : input.history;
     let promptTokens = 0;
     let completionTokens = 0;
+    // Provider-reported usage for the answer only (embedding usage is not exposed). Null when absent.
+    let usage: { promptTokens: number; completionTokens: number; totalTokens: number } | null = null;
     let reply: string;
     const demoReply = () => {
       return chunks.length
@@ -53,14 +61,21 @@ export async function handleChat(req: Request): Promise<Response> {
         reply = completion.choices[0]?.message.content?.trim() || "I couldn't generate an answer. Please rephrase your question.";
         promptTokens = completion.usage?.prompt_tokens ?? 0;
         completionTokens = completion.usage?.completion_tokens ?? 0;
+        if (completion.usage) usage = { promptTokens, completionTokens, totalTokens: completion.usage.total_tokens ?? promptTokens + completionTokens };
       }
     }
+    const generationMs = performance.now() - generationStarted;
     const messageId = crypto.randomUUID();
     session.messages = [...history, { role: "user" as const, content: input.message }, { role: "assistant" as const, content: reply }].slice(-12);
     session.turns.push({ id: messageId, feedback: null, usedKnowledge: chunks.length > 0, durationMs: performance.now() - started, promptTokens, completionTokens });
     session.lastActive = Date.now();
     const analytics = sessionAnalytics(session);
-    return Response.json({ reply, messageId, remainingMessages: analytics.remainingMessages, usedKnowledge: chunks.length > 0, chunks, chunkPreviews: chunks, analytics, retrievalMode, mode, degraded: providerDegraded() }, { headers: { "Cache-Control": "no-store" } });
+    const timings = { retrievalMs: roundMs(retrievalMs), generationMs: roundMs(generationMs), totalMs: roundMs(performance.now() - requestStarted) };
+    if (process.env.NODE_ENV === "production") {
+      // Metadata only: never the question, the answer or any source text.
+      console.info(JSON.stringify({ event: "chat", requestId, mode, retrievalMode, degraded: providerDegraded(), chunks: chunks.length, ...timings, promptTokens: usage?.promptTokens ?? null, completionTokens: usage?.completionTokens ?? null }));
+    }
+    return Response.json({ reply, messageId, remainingMessages: analytics.remainingMessages, usedKnowledge: chunks.length > 0, chunks, chunkPreviews: chunks, analytics, retrievalMode, mode, degraded: providerDegraded(), requestId, timings, usage }, { headers: { "Cache-Control": "no-store", "X-Request-Id": requestId } });
   } catch (error) {
     return errorResponse(error);
   } finally {
