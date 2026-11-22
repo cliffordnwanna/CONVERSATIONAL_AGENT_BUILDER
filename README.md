@@ -9,7 +9,7 @@ Built with Next.js 16, TypeScript, and OpenAI. Runs locally **without an API key
 ![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?logo=typescript)
 ![OpenAI](https://img.shields.io/badge/OpenAI-GPT--4o--mini-412991?logo=openai)
-![Vercel](https://img.shields.io/badge/Deployed-Vercel-black?logo=vercel)
+![Vercel](https://img.shields.io/badge/Deployment-pending-lightgrey?logo=vercel)
 
 ---
 
@@ -45,7 +45,7 @@ Built with Next.js 16, TypeScript, and OpenAI. Runs locally **without an API key
 | LLM | OpenAI GPT-4o-mini |
 | Embeddings | OpenAI text-embedding-3-small |
 | PDF Parsing | pdf-parse v2 |
-| Deployment | Vercel |
+| Deployment | Vercel (deployment pending) |
 
 ---
 
@@ -189,6 +189,7 @@ Chat accepts `{sessionId, message, type, config?, history?, knowledgeIds?, knowl
 | `npm run typecheck` | Generate route types and check TypeScript |
 | `npm test` | Automated unit/API regressions; no paid API calls |
 | `npm run eval` | Deterministic offline retrieval baseline |
+| `npm run e2e` | End-to-end API check against a running server (`BASE_URL`, default `http://localhost:3000`); adapts to offline/live mode |
 | `npm run eval -- --live` | Opt-in paid semantic embedding evaluation; requires an exported `OPENAI_API_KEY` |
 
 The evaluation reports hit@1, recall@3, MRR@3, no-match accuracy, and per-query latency over **10 synthetic questions / 4 documents**. This is a regression smoke baseline, not a claim of real-world accuracy. Live generation is covered with mocked provider responses, not an LLM judge. The script does not load `.env.local`; export the key explicitly for live evaluation. CI runs lint, typecheck, tests, offline evaluation, and production build without credentials.
@@ -223,6 +224,12 @@ The earlier planning files under `docs/` are historical design notes; this READM
 
 ---
 
+## Measuring it
+
+This app is the first target of [rag-eval-kit](https://github.com/cliffordnwanna/rag-eval-kit), a separate local toolkit that evaluates its retrieval and answers against a reviewed question set. Results will be published there once the benchmark is approved; none are claimed yet.
+
+---
+
 ## Author
 
 **Clifford Nwanna** — ML/AI Engineer
@@ -233,4 +240,4 @@ The earlier planning files under `docs/` are historical design notes; this READM
 
 ## License
 
-This project is a portfolio demonstration. Not intended for production use.
+Apache-2.0 — see [LICENSE](LICENSE). This is a portfolio demonstration, not a production service.
