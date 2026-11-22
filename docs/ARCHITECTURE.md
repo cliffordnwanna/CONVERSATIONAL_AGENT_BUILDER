@@ -26,7 +26,7 @@ Browser ──► /api/chat
 
 ## Modes
 
-The mode is decided by one thing: whether `OPENAI_API_KEY` is set on the server (`runtimeMode()` in `lib/demo.ts`). `GET /api/health` reports it. A public deployment without the key runs the offline mode, makes no AI requests, and costs nothing.
+The mode is decided by one thing: whether `OPENAI_API_KEY` is set on the server (`runtimeMode()` in `lib/demo.ts`). `GET /api/health` reports it. The public deployment runs live mode with a spending-capped key; a deployment without a key runs the offline mode, makes no AI requests and costs nothing.
 
 If a configured key is later rejected (401/403) or out of quota, the server serves the offline path for 5 minutes rather than returning errors. Responses then report `mode: "demo"` and `degraded: true`, and `/api/health` shows `degraded: true`.
 

@@ -2,7 +2,7 @@
 
 Build and inspect a document-grounded assistant: ingest knowledge, configure its behavior, ask questions, inspect retrieved excerpts, and measure actual session activity.
 
-Built with Next.js 16, TypeScript, and OpenAI. Runs locally **without an API key** in an explicitly labeled extractive demo mode. Add a server-side key to enable semantic retrieval and AI-generated answers.
+Built with Next.js 16, TypeScript, and OpenAI. The [live demo](https://conversational-agent-builder.vercel.app) runs in live mode (semantic retrieval and AI-generated answers) with a spending-capped OpenAI key. Locally it also runs **without an API key** in an explicitly labeled extractive demo mode.
 
 > **Engineering portfolio demo, not a production SaaS.** No fabricated analytics, paid plans, or claims of production deployment. Session storage is intentionally ephemeral.
 
@@ -198,9 +198,15 @@ The evaluation reports hit@1, recall@3, MRR@3, no-match accuracy, and per-query 
 
 ## Deployment
 
-For a public **offline demo**, deploy the Next.js app to a Node-compatible host or Vercel with `OPENAI_API_KEY` unset. Configure Node 22.13+ and use the standard build/start commands. This repository change does not itself publish a hosted deployment.
+**Live:** https://conversational-agent-builder.vercel.app, deployed from `main` on Vercel. Production runs in **live mode** with a server-side `OPENAI_API_KEY` that has an OpenAI project spending cap. If the key is rejected (401/403) or out of quota, the server serves labelled keyword retrieval for 5 minutes instead of erroring (`mode: "demo"`, `degraded: true`; also shown by `GET /api/health`).
 
-Do not expose a paid API key behind this unauthenticated demo without platform-level access control, request rate limits, and an OpenAI project spending cap. Six-turn limits are per process/session, not durable abuse protection. A user can create another session and serverless workers do not share memory.
+**Verified at the current release:** 50 unit tests, lint and typecheck clean, and 26 end-to-end API checks against the production URL (`E2E_REPEAT=20 npm run e2e`, 0 lost uploads in 20 sequential upload-then-ask runs).
+
+**Configure your own deployment:** import the repo into Vercel (Next.js preset, Node 22.13+), then add `OPENAI_API_KEY` for Production and Preview with the **Sensitive** type, and use a key from an OpenAI project with a spending cap. Leave it unset to get a keyless offline demo instead. Never commit the key or set it in a client-visible variable. See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for validation and rollback (Vercel Deployments, then Instant Rollback).
+
+**Privacy:** in live mode, uploaded document text, questions and conversation history are sent to OpenAI. Do not upload sensitive or personal data to the public demo.
+
+**Evaluation:** this app is the target of the evaluator linked below. Baseline and case study are pending; no evaluation results are claimed here.
 
 Before a production release, add authentication and tenant authorization, durable document/vector/session storage, centralized rate limits, retention/deletion controls, observability, and a larger domain-specific evaluation set. The deployment screen exports a browser-local configuration; it does not provision hosted agents or billing.
 
@@ -215,7 +221,9 @@ This is a demo project with intentional simplifications:
 - **Bounded demo storage** — Knowledge expires after 10 minutes of inactivity; at most 50 knowledge sessions are retained. Limits include 20 items and 100,000 extracted characters per knowledge session. Chat retains at most 500 sessions and six completed turns each. Limits reset after eviction/restart.
 - **Browser/server lifetime differs** — Browser-held content can survive a server restart; server analytics, votes, and chat quotas do not. Clear local state when using shared computers.
 - **Extractive scraping** — Public HTTP(S) HTML/text only; no JavaScript rendering or authenticated sites. Fetches are DNS-pinned, redirects revalidated, and bytes/time bounded. Respect website terms and copyright.
-- **Model limitations** — Prompt injection mitigations and citations reduce risk but do not guarantee factual accuracy. Source-context usage is not answer correctness.
+- **Model limitations** — Prompts tell the model to treat sources as untrusted and to cite them, but prompt-injection resistance has **not** been tested and should not be assumed. Citations do not guarantee factual accuracy; source-context usage is not answer correctness.
+- **No per-IP rate limiting** — The 6-message cap is per session and a new session resets it, so spend on the public demo is bounded only by the OpenAI key's spending cap.
+- **Test coverage gaps** — The repeated-upload check was sequential, not concurrent. The browser interface has no automated tests.
 - **Costs are estimates** — Generation cost uses indicative GPT-4o-mini text-token rates ($0.15/M input, $0.60/M output); embeddings and hosting are excluded. Verify current provider pricing.
 
 - **Dependency audit** — The verified lockfile has no production advisories (`npm audit --omit=dev`). Full audit still reports seven moderate development-only advisories through the latest available `typescript-eslint`/`minimatch` chain; no incompatible major override was forced. Recheck advisories before deploying.

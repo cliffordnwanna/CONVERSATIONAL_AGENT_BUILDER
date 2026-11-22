@@ -23,15 +23,19 @@ CI (`.github/workflows/ci.yml`) runs the same steps without secrets.
 
 ## Vercel
 
-Public deployments stay **keyless**: do not set `OPENAI_API_KEY` in Vercel, so the site runs the offline demo and cannot incur API cost.
+Production runs in **live mode** with a spending-capped key; the key is never committed or exposed to the browser.
 
-1. Import the GitHub repository in Vercel (framework preset: Next.js, Node 22).
-2. Add no environment variables.
-3. Deploy a **preview** first. Check `/api/health` returns `"mode":"demo"`, load the sample on `/builder`, and ask a question that uses words from the sample.
-4. Promote to production only after the preview passes.
+1. Import the GitHub repository in Vercel (framework preset: Next.js, Node 22.13+).
+2. Create an OpenAI project with a spending cap and a restricted key. Add it as `OPENAI_API_KEY` for **Production and Preview**, type **Sensitive**. Do not add it to Development (Vercel stores Development values as readable).
+3. Push to `main`; Vercel builds and deploys production. Check `GET /api/health`: with a working key it returns `"mode":"live","degraded":false`.
+4. Run `BASE_URL=https://<your-url> E2E_REPEAT=20 npm run e2e`. In live mode this makes a few dozen small paid calls.
 
-Rollback: in the Vercel dashboard, open Deployments, select the previous production deployment and choose "Promote to Production" (or "Instant Rollback").
+To run a keyless public demo instead, leave `OPENAI_API_KEY` unset; health then reports `"mode":"demo"` and no AI requests are made.
 
-Serverless instances do not share memory, so uploaded knowledge may be lost between requests. This is a documented limitation of the demo, not a bug to fix with a database.
+If a key is rejected or out of quota the app degrades to labelled keyword retrieval for 5 minutes (`degraded: true`). Rotate the key in OpenAI and Vercel, then redeploy.
 
-Do not point `rag-eval-kit` at a public deployment: it would measure the offline demo and consume shared capacity. Evaluate a local instance at an exact commit.
+**Rollback:** Vercel dashboard, Deployments, choose the previous production deployment, Instant Rollback. Tag `baseline-v0` marks the reviewed pre-deployment baseline; `release-v1.0.0` marks the first verified live release.
+
+Serverless instances do not share memory, so uploaded knowledge can be lost between requests on a cold start. Twenty sequential upload-then-ask runs in production lost nothing, but concurrent traffic has not been tested.
+
+Evaluate a local instance at an exact commit with the evaluator, not the public site: the public site's spend is real, and it is shared capacity.
