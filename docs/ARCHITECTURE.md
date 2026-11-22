@@ -30,6 +30,26 @@ The mode is decided by one thing: whether `OPENAI_API_KEY` is set on the server 
 
 If a configured key is later rejected (401/403) or out of quota, the server serves the offline path for 5 minutes rather than returning errors. Responses then report `mode: "demo"` and `degraded: true`, and `/api/health` shows `degraded: true`.
 
+## Observability
+
+Every successful `POST /api/chat` response carries a `requestId` (also the `X-Request-Id` header), `timings` (`retrievalMs`, `generationMs`, `totalMs`) and `usage` (provider-reported prompt, completion and total tokens for answer generation, or `null`). In production the server logs one JSON line per chat with those values plus mode, retrieval mode, `degraded` and chunk count. It logs no question, answer or source text. Query-embedding and ingestion token usage are not reported. There is no tracing or metrics backend.
+
+## Limits
+
+| Limit | Value | Where |
+|---|---|---|
+| User messages per session | 6 | `lib/sessionStore.ts` |
+| Idle expiry (chat session and knowledge) | 10 minutes | `lib/sessionStore.ts`, `lib/knowledgeStore.ts` |
+| Storage | In server memory only; lost on restart or cold start | |
+| Knowledge per session | 20 items, 100,000 extracted characters | `lib/knowledgeStore.ts` |
+| Per document | 50,000 characters; 5 files per upload, 5 MB each, 12 MB request | `lib/ingestion.ts` |
+| Retained sessions | 50 knowledge sessions, 500 chat sessions | |
+| Rate limiting | Per session only. There is no per-IP limiter, so a new session resets the 6-message cap | |
+
+## Privacy
+
+In live mode, document text (for embeddings) and questions, history and retrieved passages (for the answer) are sent to OpenAI. Nothing is stored server-side beyond the in-memory session. The browser keeps settings, source copies and recent chat in local storage.
+
 ## Known limits
 
 - Storage is in memory. On serverless platforms, instances are recycled and may not share memory, so uploaded knowledge can disappear between requests. The `inline` fallback exists to soften this and is not equivalent to semantic retrieval.

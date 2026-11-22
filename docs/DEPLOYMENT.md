@@ -28,9 +28,11 @@ Production runs in **live mode** with a spending-capped key; the key is never co
 1. Import the GitHub repository in Vercel (framework preset: Next.js, Node 22.13+).
 2. Create an OpenAI project with a spending cap and a restricted key. Add it as `OPENAI_API_KEY` for **Production and Preview**, type **Sensitive**. Do not add it to Development (Vercel stores Development values as readable).
 3. Push to `main`; Vercel builds and deploys production. Check `GET /api/health`: with a working key it returns `"mode":"live","degraded":false`.
-4. Run `BASE_URL=https://<your-url> E2E_REPEAT=20 npm run e2e`. In live mode this makes a few dozen small paid calls.
+4. Run `BASE_URL=https://<your-url> E2E_REPEAT=20 npm run e2e` (27 checks offline, 28 live, plus the repeat check). In live mode this makes a few dozen small paid calls.
 
 To run a keyless public demo instead, leave `OPENAI_API_KEY` unset; health then reports `"mode":"demo"` and no AI requests are made.
+
+**Reading the logs:** in production each successful chat writes one JSON line (`event: "chat"`) with `requestId`, mode, timings and token counts, and never the question, answer or source text. The same `requestId` is returned to the caller in the response body and the `X-Request-Id` header.
 
 If a key is rejected or out of quota the app degrades to labelled keyword retrieval for 5 minutes (`degraded: true`). Rotate the key in OpenAI and Vercel, then redeploy.
 

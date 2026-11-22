@@ -175,6 +175,24 @@ On a serverless cold start, browser-held knowledge can provide a bounded, source
 
 Chat accepts `{sessionId, message, type, config?, history?, knowledgeIds?, knowledgeContent?}`. Inline knowledge entries require `{id,title,content}`. Feedback accepts `{sessionId,messageId,value}` where value is `up`, `down`, or `null`. Delete accepts `{sessionId,id?}`. Session IDs must be 8–100 alphanumeric, underscore, or hyphen characters; the browser generates a UUID. Invalid input returns 400/413, overlapping chat requests 409, and exhausted message quota 429.
 
+### Chat response
+
+`POST /api/chat` returns JSON with the fields below. The last four were added for observability; all earlier fields are unchanged.
+
+| Field | Meaning |
+|---|---|
+| `reply`, `messageId` | The answer text and an ID used for feedback |
+| `usedKnowledge`, `chunks`, `chunkPreviews`, `retrievalMode` | The source passages supplied to the model and how they were found (`semantic`, `lexical`, `inline` or `none`) |
+| `mode`, `degraded` | `live` or `demo`; `degraded: true` means the API key was rejected or out of quota and the keyword fallback answered |
+| `remainingMessages`, `analytics` | The session allowance and measured session metrics |
+| `requestId` | A UUID for this request. The same value is sent in the `X-Request-Id` response header. It is not the `messageId` |
+| `timings` | `{ retrievalMs, generationMs, totalMs }` in milliseconds. Retrieval includes the query embedding in live mode; generation is the model call (or building the offline excerpt reply); total is the whole handler |
+| `usage` | `{ promptTokens, completionTokens, totalTokens }` as reported by the provider for answer generation, or `null` when there was no model call or no usage was returned. Query-embedding tokens are not included |
+
+Errors (400, 409, 413, 429, 502, 503) keep their existing shape and carry no `requestId`.
+
+In production the server writes one JSON log line per successful chat with the `requestId`, mode, retrieval mode, `degraded`, chunk count, timings and token counts. It never contains questions, answers or source text; a unit test asserts this.
+
 ---
 
 ## Scripts
@@ -186,9 +204,9 @@ Chat accepts `{sessionId, message, type, config?, history?, knowledgeIds?, knowl
 | `npm run start` | Production server |
 | `npm run lint` | ESLint |
 | `npm run typecheck` | Generate route types and check TypeScript |
-| `npm test` | Automated unit/API regressions; no paid API calls |
+| `npm test` | 56 automated unit/API regression tests; no paid API calls |
 | `npm run eval` | Deterministic offline retrieval baseline |
-| `npm run e2e` | End-to-end API check against a running server (`BASE_URL`, default `http://localhost:3000`); adapts to offline/live mode |
+| `npm run e2e` | End-to-end API check against a running server (`BASE_URL`, default `http://localhost:3000`); adapts to offline/live mode (27 checks offline, 28 live) |
 | `npm run eval -- --live` | Opt-in paid semantic embedding evaluation; requires an exported `OPENAI_API_KEY` |
 
 The evaluation reports hit@1, recall@3, MRR@3, no-match accuracy, and per-query latency over **10 synthetic questions / 4 documents**. This is a regression smoke baseline, not a claim of real-world accuracy. Live generation is covered with mocked provider responses, not an LLM judge. The script does not load `.env.local`; export the key explicitly for live evaluation. CI runs lint, typecheck, tests, offline evaluation, and production build without credentials.
@@ -199,15 +217,15 @@ The evaluation reports hit@1, recall@3, MRR@3, no-match accuracy, and per-query 
 
 **Live:** https://conversational-agent-builder.vercel.app, deployed from `main` on Vercel. Production runs in **live mode** with a server-side `OPENAI_API_KEY` that has an OpenAI project spending cap. If the key is rejected (401/403) or out of quota, the server serves labelled keyword retrieval for 5 minutes instead of erroring (`mode: "demo"`, `degraded: true`; also shown by `GET /api/health`).
 
-**Verified at the current release:** 50 unit tests, lint and typecheck clean, and 26 end-to-end API checks against the production URL (`E2E_REPEAT=20 npm run e2e`, 0 lost uploads in 20 sequential upload-then-ask runs).
+**Verification:** locally, 56 unit tests plus lint, typecheck and the 27-check offline end-to-end run. The production site was last verified at tag `release-v1.1.0` (26 API checks and 31 browser-UI checks, 0 lost uploads in 20 sequential upload-then-ask runs). That was before the `requestId`, `timings` and `usage` response fields were added, so production has not been re-verified with them until it is redeployed.
 
 **Configure your own deployment:** import the repo into Vercel (Next.js preset, Node 22.13+), then add `OPENAI_API_KEY` for Production and Preview with the **Sensitive** type, and use a key from an OpenAI project with a spending cap. Leave it unset to get a keyless offline demo instead. Never commit the key or set it in a client-visible variable. See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for validation and rollback (Vercel Deployments, then Instant Rollback).
 
-**Privacy:** in live mode, uploaded document text, questions and conversation history are sent to OpenAI. Do not upload sensitive or personal data to the public demo.
+**Privacy:** in live mode, uploaded document text, questions and conversation history are sent to OpenAI. Do not upload sensitive or personal data to the public demo. The application's own log line holds request metadata only (see Chat response); it does not log questions, answers or source text.
 
 **Evaluation:** this app is the target of the evaluator linked below. Baseline and case study are pending; no evaluation results are claimed here.
 
-Before a production release, add authentication and tenant authorization, durable document/vector/session storage, centralized rate limits, retention/deletion controls, observability, and a larger domain-specific evaluation set. The deployment screen exports a browser-local configuration; it does not provision hosted agents or billing.
+Before a production release, add authentication and tenant authorization, durable document/vector/session storage, centralized rate limits, retention/deletion controls, tracing and metrics beyond the per-request fields and log line, and a larger domain-specific evaluation set. The deployment screen exports a browser-local configuration; it does not provision hosted agents or billing.
 
 ---
 
@@ -217,7 +235,7 @@ This is a demo project with intentional simplifications:
 
 - **In-memory storage** — Knowledge, vectors, and sessions are stored in Node.js memory. Data resets on serverless cold starts (Vercel) or server restarts.
 - **Session-scoped, not authenticated** — Random browser session IDs separate demo data but are not a substitute for user authorization. Local browser state and downloaded exports may contain document text; use only non-sensitive data.
-- **Bounded demo storage** — Knowledge expires after 10 minutes of inactivity; at most 50 knowledge sessions are retained. Limits include 20 items and 100,000 extracted characters per knowledge session. Chat retains at most 500 sessions and six completed turns each. Limits reset after eviction/restart.
+- **Bounded demo storage** — Knowledge expires after 10 minutes of inactivity; at most 50 knowledge sessions are retained. Limits include 20 items and 100,000 extracted characters per knowledge session, 50,000 characters per document, and per upload at most 5 files of 5 MB each (12 MB request). Chat retains at most 500 sessions and six completed turns each, with a 10-minute idle expiry. Limits reset after eviction/restart.
 - **Browser/server lifetime differs** — Browser-held content can survive a server restart; server analytics, votes, and chat quotas do not. Clear local state when using shared computers.
 - **Extractive scraping** — Public HTTP(S) HTML/text only; no JavaScript rendering or authenticated sites. Fetches are DNS-pinned, redirects revalidated, and bytes/time bounded. Respect website terms and copyright.
 - **Model limitations** — Prompts tell the model to treat sources as untrusted and to cite them, but prompt-injection resistance has **not** been tested and should not be assumed. Citations do not guarantee factual accuracy; source-context usage is not answer correctness.
