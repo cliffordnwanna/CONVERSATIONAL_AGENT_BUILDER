@@ -226,7 +226,7 @@ The earlier planning files under `docs/` are historical design notes; this READM
 
 ## Measuring it
 
-This app is the first target of [rag-eval-kit](https://github.com/cliffordnwanna/rag-eval-kit), a separate local toolkit that evaluates its retrieval and answers against a reviewed question set. Results will be published there once the benchmark is approved; none are claimed yet.
+This app is the first target of [rag-eval-kit](https://github.com/cliffordnwanna/agent-skills/tree/main/skills/rag-eval-kit), a separate local toolkit that evaluates its retrieval and answers against a reviewed question set. Results will be published there once the benchmark is approved; none are claimed yet.
 
 ---
 

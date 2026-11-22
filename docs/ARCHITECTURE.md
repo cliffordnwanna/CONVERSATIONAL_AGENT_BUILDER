@@ -28,6 +28,8 @@ Browser ──► /api/chat
 
 The mode is decided by one thing: whether `OPENAI_API_KEY` is set on the server (`runtimeMode()` in `lib/demo.ts`). `GET /api/health` reports it. A public deployment without the key runs the offline mode, makes no AI requests, and costs nothing.
 
+If a configured key is later rejected (401/403) or out of quota, the server serves the offline path for 5 minutes rather than returning errors. Responses then report `mode: "demo"` and `degraded: true`, and `/api/health` shows `degraded: true`.
+
 ## Known limits
 
 - Storage is in memory. On serverless platforms, instances are recycled and may not share memory, so uploaded knowledge can disappear between requests. The `inline` fallback exists to soften this and is not equivalent to semantic retrieval.
