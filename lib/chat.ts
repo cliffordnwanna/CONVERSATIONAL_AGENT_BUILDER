@@ -61,14 +61,23 @@ export async function retrieve(input: ChatInput) {
   let chunks: SourcePreview[] = [];
   let retrievalMode: "semantic" | "lexical" | "inline" | "none" = "none";
   if (available.length) {
-    if (runtimeMode() === "demo") {
+    const lexical = () => {
       chunks = available.map(chunk => ({ id: chunk.id, knowledgeId: chunk.metadata.knowledgeId, source: chunk.metadata.source, preview: chunk.content, score: lexicalScore(input.message, chunk.content) }))
         .filter(chunk => chunk.score > 0).sort((a, b) => b.score - a.score).slice(0, 3);
       retrievalMode = "lexical";
+    };
+    if (runtimeMode() === "demo") {
+      lexical();
     } else {
       const embedding = await createEmbedding(input.message);
-      chunks = vectorStore.search(input.sessionId, embedding, 3, input.knowledgeIds).map(chunk => ({ id: chunk.id, knowledgeId: chunk.metadata.knowledgeId, source: chunk.metadata.source, preview: chunk.content, score: chunk.score }));
-      retrievalMode = "semantic";
+      // If the key just failed, or stored vectors came from the offline path, never compare
+      // different vector types: fall back to labelled lexical retrieval.
+      if (runtimeMode() === "demo" || available.some(chunk => chunk.embedding.length !== embedding.length)) {
+        lexical();
+      } else {
+        chunks = vectorStore.search(input.sessionId, embedding, 3, input.knowledgeIds).map(chunk => ({ id: chunk.id, knowledgeId: chunk.metadata.knowledgeId, source: chunk.metadata.source, preview: chunk.content, score: chunk.score }));
+        retrievalMode = "semantic";
+      }
     }
   }
   // Recover only missing sources after a serverless cold start. Never bypass a semantic no-match.

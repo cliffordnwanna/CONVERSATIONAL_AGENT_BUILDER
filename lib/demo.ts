@@ -22,6 +22,32 @@ export function lexicalScore(query: string, content: string): number {
   return [...queryTerms].filter(term => contentTerms.has(term)).length / queryTerms.size;
 }
 
+const DEGRADED_MS = 5 * 60 * 1000;
+let degradedUntil = 0;
+
+/** Auth, permission and quota/billing failures mean the configured key cannot be used right now. */
+export function isProviderFailure(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const { status, code } = error as { status?: unknown; code?: unknown };
+  return status === 401 || status === 403 || (status === 429 && code === "insufficient_quota");
+}
+
+/** On such a failure, serve from the keyless offline path for a few minutes instead of returning 502. */
+export function markProviderDegraded(error: unknown): boolean {
+  if (!isProviderFailure(error)) return false;
+  degradedUntil = Date.now() + DEGRADED_MS;
+  return true;
+}
+
+export function providerDegraded(): boolean {
+  return Date.now() < degradedUntil;
+}
+
+export function resetProviderDegradation() {
+  degradedUntil = 0;
+}
+
 export function runtimeMode(): "live" | "demo" {
-  return process.env.OPENAI_API_KEY?.trim() ? "live" : "demo";
+  if (!process.env.OPENAI_API_KEY?.trim() || providerDegraded()) return "demo";
+  return "live";
 }
