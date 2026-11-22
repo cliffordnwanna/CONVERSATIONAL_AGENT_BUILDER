@@ -111,7 +111,6 @@ app/
 
 components/
   AgentConfigurator.tsx     # Assistant settings panel (persisted in the browser)
-  KnowledgeUpload.tsx       # Compatibility wrapper for knowledge workflow
   KnowledgeBaseWorkflow.tsx # Sample, files, text, website, and source management
   ui/                       # shadcn/ui primitives
 
