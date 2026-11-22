@@ -9,7 +9,7 @@ Built with Next.js 16, TypeScript, and OpenAI. Runs locally **without an API key
 ![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?logo=typescript)
 ![OpenAI](https://img.shields.io/badge/OpenAI-GPT--4o--mini-412991?logo=openai)
-![Vercel](https://img.shields.io/badge/Deployment-pending-lightgrey?logo=vercel)
+[![Live demo](https://img.shields.io/badge/Live_demo-Vercel-black?logo=vercel)](https://conversational-agent-builder.vercel.app)
 
 ---
 
@@ -45,7 +45,7 @@ Built with Next.js 16, TypeScript, and OpenAI. Runs locally **without an API key
 | LLM | OpenAI GPT-4o-mini |
 | Embeddings | OpenAI text-embedding-3-small |
 | PDF Parsing | pdf-parse v2 |
-| Deployment | Vercel (deployment pending) |
+| Deployment | Vercel — [live demo](https://conversational-agent-builder.vercel.app) |
 
 ---
 
